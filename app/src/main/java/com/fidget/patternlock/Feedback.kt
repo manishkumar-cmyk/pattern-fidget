@@ -159,8 +159,6 @@ class Feedback(private val context: Context, initialPack: SoundPack) {
 
     // ---- Synthesis ----
 
-    private val rate = 44100
-
     private fun render(pack: SoundPack, freq: Double): FloatArray {
         val seconds = when (pack) {
             SoundPack.CHIME -> 0.22
@@ -222,6 +220,7 @@ class Feedback(private val context: Context, initialPack: SoundPack) {
 
     /** Normalizes to a calm peak level and fades the tail so nothing clicks. */
     private fun finish(s: FloatArray, peak: Float): FloatArray {
+        if (s.isEmpty()) return s
         val max = s.maxOf { abs(it) }.coerceAtLeast(1e-6f)
         val fade = (rate * 0.005).toInt().coerceAtMost(s.size)
         for (i in s.indices) {
@@ -246,5 +245,10 @@ class Feedback(private val context: Context, initialPack: SoundPack) {
         buf.put("data".toByteArray()); buf.putInt(n * 2)
         for (v in samples) buf.putShort((v.coerceIn(-1f, 1f) * Short.MAX_VALUE).toInt().toShort())
         file.writeBytes(buf.array())
+    }
+
+    private companion object {
+        /** Sample rate for generated tones. A constant, so it exists before init runs. */
+        const val rate = 44100
     }
 }
