@@ -3,7 +3,7 @@
 A calm, tactile fidget app: a lock-screen style dot grid you draw on, with soft physics,
 gentle generative music and a quiet haptic language. Nothing unlocks. Nothing is scored.
 
-## What's in 3.0
+## What's in 4.0 (3.0 features, redesigned)
 - **Home is the canvas.** Touch the grid and you're drawing; the interface fades away while
   your finger is down and returns 1.5 s after you lift. At rest the grid breathes and traces
   a faint pattern (or a favourite you choose).
@@ -45,13 +45,13 @@ Android 8.0+ (minSdk 26). No third-party libraries. Nothing leaves the device.
 Copy the APK to the phone and tap it. Allow "Install unknown apps" once when Android asks.
 It installs over version 2 and keeps your saved patterns.
 
-## Code map
-- `MainActivity.kt`: screens (home canvas, mode sheet, Zen, Memory, Collection, playback, settings)
-- `PatternView.kt`: the grid: touch, lock rules, modes, springs, ripples, completions, accessibility
-- `Sound.kt`: direction-aware pentatonic engine and the nine synthesized sound environments
-- `Haptics.kt`: the haptic vocabulary (composed primitives with fallbacks)
-- `Theme.kt`: the five sensory themes plus AMOLED / high-contrast variants
-- `Shapes.kt`: shape detection for per-shape completions and name suggestions
-- `Patterns.kt`: random drawable patterns, Collection storage (migrates v2 saves)
-- `Prefs.kt`: every setting in one place
-- `Widgets.kt`, `Ui.kt`: animated thumbnails, icons, switch, and shared view builders
+## Code map (4.0: Compose screens around the proven grid)
+- `MainActivity.kt`, `ui/FidgetApp.kt`: the Compose host and Navigation graph (home, draw, draw/{mode}, zen, memory, collection, playback, settings, themes)
+- `ui/theme/`: design tokens (colours, spacing, radii, motion, type) and `FidgetTheme`
+- `ui/components/`: `PatternGrid` (hosts the grid), `GlowCard`, `FidgetBottomBar`, `ModeCard`, `ThemePreviewCard`, `PatternThumb`, controls and icons
+- `ui/home|draw|memory|collection|settings|themes/`: one folder per screen
+- `PatternView.kt`: the grid itself: touch, lock rules, modes, springs, layered glow, ripples, completions, accessibility
+- `interaction/`: `GridFeedback` (grid events to sound, haptics, counter) and `SavePrompt`
+- `domain/`: `MemoryGameEngine` and display formatting
+- `data/FidgetEnv.kt`: observable settings, store, sound and haptics shared by every screen
+- `Sound.kt` (ten synthesized sound packs, incl. Marimba), `Haptics.kt`, `Theme.kt`, `Shapes.kt`, `Patterns.kt`, `Prefs.kt`

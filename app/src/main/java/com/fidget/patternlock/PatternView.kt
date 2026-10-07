@@ -46,6 +46,8 @@ class PatternView(context: Context) : View(context) {
         fun onCycle() {}
         fun onLongPress() {}
         fun onTwoFingerTap() {}
+        /** A short touch that connected nothing. */
+        fun onTap() {}
         fun onLoopSpeed(speed: Float) {}
     }
 
@@ -90,6 +92,9 @@ class PatternView(context: Context) : View(context) {
     var quietCompletion = false
     var highContrast = false
     var idleBreathing = true
+    /** Fraction of the shorter side the dot grid occupies. */
+    var gridFill = 0.84f
+        set(value) { field = value; computeLayout(); invalidate() }
     var longPressEnabled = false
     /** When true, touching the grid during playback stops it and starts drawing (home idle animation). */
     var interruptible = false
@@ -169,6 +174,10 @@ class PatternView(context: Context) : View(context) {
     private var completionDur = 0f
 
     private var missStart = 0L
+    private var missGlow = false
+    /** 0..1 pulse while a completion plays: dots and glow brighten together. */
+    private var brighten = 0f
+    private var glowScale = 1f
 
     // Pattern Loop
     private var loopPattern: List<Int>? = null
@@ -215,7 +224,7 @@ class PatternView(context: Context) : View(context) {
         }
         if (width == 0 || height == 0) return
         val availH = (height - insetTop - insetBottom).coerceAtLeast(height / 3)
-        val side = min(width.toFloat(), availH.toFloat()) * 0.84f
+        val side = min(width.toFloat(), availH.toFloat()) * gridFill
         spacing = side / n
         val left = (width - side) / 2f
         val top = insetTop + (availH - side) / 2f
@@ -568,6 +577,7 @@ class PatternView(context: Context) : View(context) {
     }
 
     private fun handleTap(now: Long) {
+        listener?.onTap()
         if (!autoFade) return
         if (now - lastTapTime < 320) { lastTapTime = 0; replayLast() } else lastTapTime = now
     }
@@ -644,11 +654,17 @@ class PatternView(context: Context) : View(context) {
             animating = true
         }
 
+        // Slow strokes spread a wider, softer glow; fast ones tighten it. Subtle by design.
+        val gTarget = if (drawing && !reduceMotion) 1.25f - 0.45f * ((speedDp - 300f) / 900f).coerceIn(0f, 1f) else 1f
+        glowScale += (gTarget - glowScale) * (1f - exp(-dt / 140f))
+        missGlow = false
+
         // Completion state
         val cp = if (completionStart > 0) ((now - completionStart) / completionDur).coerceIn(0f, 1f) else 1f
         val completing = completionStart > 0 && cp < 1f
         if (completing) animating = true
         val allDotsBoost = if (completing && completionShape == Shape.ALL_DOTS && !reduceMotion) sin(PI * cp).toFloat() * 0.45f else 0f
+        brighten = if (completing) sin(PI * cp).toFloat() else 0f
 
         // Springs + proximity
         val kSpring = 400f
@@ -688,7 +704,14 @@ class PatternView(context: Context) : View(context) {
             val d = hypot(fingerX - centersX[i], fingerY - centersY[i]).coerceAtLeast(1f)
             val x = centersX[i] + (fingerX - centersX[i]) / d * lean
             val y = centersY[i] + (fingerY - centersY[i]) / d * lean
-            fill.color = Themes.mix(t.dot, t.active, 0.3f * prox[i] + allDotsBoost)
+            val tint = Themes.mix(t.dot, t.active, 0.3f * prox[i] + allDotsBoost)
+            if (t.glow > 0f) {
+                // A faint halo keeps resting dots softly lit.
+                fill.color = Themes.mix(t.dot, t.glowColor, 0.5f + prox[i] * 0.5f)
+                fill.alpha = (255 * restDim * t.glow * (0.10f + 0.22f * prox[i])).toInt()
+                canvas.drawCircle(x, y, dotR * (2.3f + 1.2f * prox[i]) * s, fill)
+            }
+            fill.color = tint
             fill.alpha = (255 * restDim).toInt()
             canvas.drawCircle(x, y, dotR * s, fill)
         }
@@ -731,7 +754,7 @@ class PatternView(context: Context) : View(context) {
             animating = true
             if (p < 0f) continue
             val e = 1f - (1f - p).pow(3)
-            stroke.color = t.active
+            stroke.color = t.ripple
             stroke.alpha = (255 * r.alpha * (1f - p) * restDim).toInt()
             stroke.strokeWidth = (if (t.glow == 0f) 1f else 1.6f) * density * (1.5f - p)
             canvas.drawCircle(r.x, r.y, dotR * 1.4f + (r.maxR - dotR) * e, stroke)
@@ -745,9 +768,10 @@ class PatternView(context: Context) : View(context) {
             var activeColor = t.active
             if (missStart > 0) {
                 val mp = ((now - missStart) / (if (reduceMotion) 300f else 900f)).coerceIn(0f, 1f)
-                lineColor = Themes.mix(t.line, t.muted, min(1f, mp * 2.5f))
-                activeColor = Themes.mix(t.active, t.muted, min(1f, mp * 2.5f))
-                alpha *= 1f - mp
+                lineColor = Themes.mix(t.line, t.error, min(1f, mp * 3f))
+                activeColor = Themes.mix(t.active, t.error, min(1f, mp * 3f))
+                missGlow = true
+                alpha *= 1f - mp * 0.85f
                 if (!reduceMotion) canvas.translate(0f, 8f * density * mp)
                 animating = true
             }
@@ -804,15 +828,23 @@ class PatternView(context: Context) : View(context) {
 
     private fun drawActiveDot(canvas: Canvas, x: Float, y: Float, s: Float, color: Int, alpha: Float, now: Long) {
         val g = theme.glow
+        val gc = if (missGlow) color else theme.glowColor
         if (g > 0f) {
             val pulse = if (reduceMotion) 0.5f else 0.5f + 0.5f * sin(2 * PI * (now % 1600) / 1600.0).toFloat()
-            fill.color = color
-            fill.alpha = (255 * alpha * g * (0.10f + 0.10f * pulse)).toInt()
-            canvas.drawCircle(x, y, dotR * 3.2f * s, fill)
+            val lift = 1f + 0.6f * brighten
+            val sc = glowScale * s
+            fill.color = gc
+            fill.alpha = (255 * alpha * g * (0.05f + 0.03f * pulse) * lift).toInt().coerceAtMost(255)
+            canvas.drawCircle(x, y, dotR * 4.6f * sc, fill)
+            fill.alpha = (255 * alpha * g * (0.10f + 0.04f * pulse) * lift).toInt().coerceAtMost(255)
+            canvas.drawCircle(x, y, dotR * 3.2f * sc, fill)
+            fill.color = Themes.mix(gc, theme.secondaryGlow, 0.4f)
+            fill.alpha = (255 * alpha * g * 0.22f * lift).toInt().coerceAtMost(255)
+            canvas.drawCircle(x, y, dotR * 2.2f * sc, fill)
         }
-        fill.color = color
+        fill.color = Themes.mix(color, 0xFFFFFFFF.toInt(), 0.25f + 0.35f * brighten)
         fill.alpha = (255 * alpha).toInt()
-        canvas.drawCircle(x, y, dotR * 1.45f * s, fill)
+        canvas.drawCircle(x, y, dotR * 1.45f * s * (1f + 0.12f * brighten), fill)
         if (highContrast) {
             stroke.color = theme.text
             stroke.alpha = (255 * alpha).toInt()
@@ -821,31 +853,42 @@ class PatternView(context: Context) : View(context) {
         }
     }
 
-    /** A tapered line: thinner at the oldest end, a soft glow underneath, optional live segment to the finger. */
+    /**
+     * A tapered line in three layers: a wide faint halo, a medium glow and a thin crisp core.
+     * The glow passes are drawn as one path each so overlapping segments never double up.
+     */
     private fun drawTrail(canvas: Canvas, xs: FloatArray, ys: FloatArray, color: Int, alpha: Float,
                           widthScale: Float, live: Boolean, size: Int = xs.size) {
         if (size < 1 || alpha <= 0f) return
         val segs = size - 1 + (if (live) 1 else 0)
         if (segs < 1) return
         val g = if (highContrast) 0f else theme.glow
-        for (pass in 0..1) {
-            if (pass == 0 && g == 0f) continue
-            for (k in 0 until segs) {
-                val x0 = xs[k]; val y0 = ys[k]
-                val x1 = if (k + 1 < size) xs[k + 1] else tailX
-                val y1 = if (k + 1 < size) ys[k + 1] else tailY
-                val frac = if (segs <= 1) 1f else k / (segs - 1f)
-                val w = lineW * widthScale * (0.7f + 0.3f * frac)
-                stroke.color = color
-                if (pass == 0) {
-                    stroke.strokeWidth = w * 3.4f
-                    stroke.alpha = (255 * alpha * g * 0.16f).toInt()
-                } else {
-                    stroke.strokeWidth = w
-                    stroke.alpha = (255 * alpha).toInt()
-                }
-                canvas.drawLine(x0, y0, x1, y1, stroke)
-            }
+        val glowColor = if (missGlow) color else theme.glowColor
+        if (g > 0f) {
+            path.reset()
+            path.moveTo(xs[0], ys[0])
+            for (k in 1 until size) path.lineTo(xs[k], ys[k])
+            if (live) path.lineTo(tailX, tailY)
+            val base = lineW * widthScale
+            val lift = 1f + 0.5f * brighten
+            stroke.color = glowColor
+            stroke.strokeWidth = base * 5.5f * glowScale
+            stroke.alpha = (255 * alpha * g * 0.08f * lift).toInt().coerceAtMost(255)
+            canvas.drawPath(path, stroke)
+            stroke.color = Themes.mix(glowColor, theme.secondaryGlow, 0.35f)
+            stroke.strokeWidth = base * 2.6f * glowScale
+            stroke.alpha = (255 * alpha * g * 0.2f * lift).toInt().coerceAtMost(255)
+            canvas.drawPath(path, stroke)
+        }
+        for (k in 0 until segs) {
+            val x0 = xs[k]; val y0 = ys[k]
+            val x1 = if (k + 1 < size) xs[k + 1] else tailX
+            val y1 = if (k + 1 < size) ys[k + 1] else tailY
+            val frac = if (segs <= 1) 1f else k / (segs - 1f)
+            stroke.color = Themes.mix(color, 0xFFFFFFFF.toInt(), 0.2f + 0.3f * brighten)
+            stroke.strokeWidth = lineW * widthScale * (0.7f + 0.3f * frac)
+            stroke.alpha = (255 * alpha).toInt()
+            canvas.drawLine(x0, y0, x1, y1, stroke)
         }
     }
 

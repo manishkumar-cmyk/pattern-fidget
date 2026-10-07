@@ -19,7 +19,9 @@ import kotlin.random.Random
 
 enum class SoundEnv(val label: String, val octave: Double) {
     CHIME("Chime", 2.0), SOFT_SYNTH("Soft Synth", 1.0), GLASS("Glass", 2.0), WATER("Water", 2.0),
-    WOOD("Wood", 1.0), RAIN("Rain", 2.0), BELLS("Bells", 1.0), PIANO("Piano", 1.0), BUBBLES("Bubbles", 2.0)
+    WOOD("Wood", 1.0), RAIN("Rain", 2.0), BELLS("Bells", 1.0), PIANO("Piano", 1.0), BUBBLES("Bubbles", 2.0),
+    /** Appended last so saved sound-pack choices keep their ordinals. */
+    MARIMBA("Marimba", 1.0)
 }
 
 /**
@@ -180,7 +182,7 @@ class SoundEngine(private val context: Context) {
         val seconds = when (env) {
             SoundEnv.CHIME -> 1.2; SoundEnv.SOFT_SYNTH -> 1.6; SoundEnv.GLASS -> 1.4; SoundEnv.WATER -> 0.35
             SoundEnv.WOOD -> 0.5; SoundEnv.RAIN -> 0.45; SoundEnv.BELLS -> 2.4; SoundEnv.PIANO -> 1.0
-            SoundEnv.BUBBLES -> 0.16
+            SoundEnv.BUBBLES -> 0.16; SoundEnv.MARIMBA -> 0.8
         }
         val n = (RATE * seconds).toInt()
         val out = FloatArray(n)
@@ -222,6 +224,9 @@ class SoundEngine(private val context: Context) {
                     0.5 * sin(4 * PI * f * t) * exp(-t * 7.0) +
                     0.25 * sin(6 * PI * f * t) * exp(-t * 10.0) +
                     0.12 * sin(8 * PI * f * t) * exp(-t * 14.0))
+                SoundEnv.MARIMBA -> att(t, 0.002) * (sin(2 * PI * f * t) * exp(-t * 6.5) +
+                    0.45 * sin(2 * PI * f * 4.0 * t) * exp(-t * 28.0) +
+                    0.12 * sin(2 * PI * f * 9.9 * t) * exp(-t * 60.0))
                 SoundEnv.BUBBLES -> {
                     val g = f * 0.6 * (1 + 0.9 * (1 - exp(-t * 45.0)))
                     phase += 2 * PI * g / RATE

@@ -26,6 +26,15 @@ data class Theme(
     val keyRoot: Int,
     val minorKey: Boolean,
     val haptic: HapticFlavor,
+    /** Soft colour of the glow around dots and lines. */
+    val glowColor: Int = active,
+    /** Warmer or cooler accent used for the outer halo and the travelling light. */
+    val secondaryGlow: Int = line,
+    val ripple: Int = active,
+    /** Muted warm red used for a missed Memory pattern. Never harsh. */
+    val error: Int = 0xFFE58A9A.toInt(),
+    /** Mid stop of the background gradient. */
+    val bgMid: Int = bgBottom,
 )
 
 enum class HapticFlavor { ROUNDED, LIGHT, DRY, RISING, TICKS }
@@ -34,30 +43,35 @@ private fun c(hex: Long) = hex.toInt()
 
 object Themes {
     val all = listOf(
-        Theme("Dusk", "Warm violet, glowing trails", c(0xFF14112B), c(0xFF2E2156), c(0xFF231D45),
-            c(0xFF4A4378), c(0xFFA9BCFF), c(0xFF8FA8FF), c(0xFFE6E4F5), c(0xFF9A96BD),
-            0.9f, 1.0f, false, SoundEnv.CHIME, 2, false, HapticFlavor.ROUNDED),
-        Theme("Fog", "Soft grey, slow mist", c(0xFF22272E), c(0xFF414852), c(0xFF2E343C),
-            c(0xFF5D6670), c(0xFFDDE3EA), c(0xFFC9D1DA), c(0xFFE8ECF0), c(0xFF9AA4AE),
-            0.45f, 1.5f, false, SoundEnv.RAIN, 0, false, HapticFlavor.LIGHT),
-        Theme("Sage", "Moss green, wooden notes", c(0xFF111D17), c(0xFF283A2D), c(0xFF1C2B21),
-            c(0xFF41594A), c(0xFFB8D8B2), c(0xFFA0C79A), c(0xFFE3EDE0), c(0xFF8EA690),
-            0.6f, 1.15f, false, SoundEnv.WOOD, -5, false, HapticFlavor.DRY),
-        Theme("Tide", "Deep teal, glass and water", c(0xFF071A21), c(0xFF0F3A44), c(0xFF0E2A32),
-            c(0xFF2B5560), c(0xFF7FF0DF), c(0xFF6FE3D2), c(0xFFDDF3F0), c(0xFF83AAA7),
-            0.85f, 1.0f, true, SoundEnv.GLASS, 4, false, HapticFlavor.RISING),
-        Theme("Ink", "True black, minimal", c(0xFF000000), c(0xFF000000), c(0xFF111111),
-            c(0xFF3A3A3A), c(0xFFFFFFFF), c(0xFFE6E6E6), c(0xFFF2F2F2), c(0xFF8C8C8C),
-            0f, 0.8f, false, SoundEnv.BELLS, -3, true, HapticFlavor.TICKS),
+        Theme("Dusk", "Calm purples and warm glow", c(0xFF070B1C), c(0xFF1D1747), c(0xFF161F3A),
+            c(0xFF4A4A86), c(0xFFB3BEFF), c(0xFF9FB0FF), c(0xFFE8E8F8), c(0xFF9A9CC4),
+            0.9f, 1.0f, false, SoundEnv.CHIME, 2, false, HapticFlavor.ROUNDED,
+            glowColor = c(0xFF8F7BFF), secondaryGlow = c(0xFFE0A8FF), ripple = c(0xFFA58CFF), bgMid = c(0xFF120F33)),
+        Theme("Fog", "Minimal and serene", c(0xFF1A2130), c(0xFF454F62), c(0xFF2A3242),
+            c(0xFF66707F), c(0xFFE2E7EE), c(0xFFCDD5E0), c(0xFFE8ECF2), c(0xFFA0AAB8),
+            0.45f, 1.5f, false, SoundEnv.RAIN, 0, false, HapticFlavor.LIGHT,
+            glowColor = c(0xFFD5DCE8), secondaryGlow = c(0xFFFFFFFF), ripple = c(0xFFDDE3EC), bgMid = c(0xFF2F3849)),
+        Theme("Sage", "Natural and soothing", c(0xFF08130E), c(0xFF21392A), c(0xFF14241B),
+            c(0xFF3F5E4A), c(0xFFBFE8C4), c(0xFFA6D8AE), c(0xFFE3EFE2), c(0xFF8FAA95),
+            0.6f, 1.15f, false, SoundEnv.WOOD, -5, false, HapticFlavor.DRY,
+            glowColor = c(0xFF78E0A6), secondaryGlow = c(0xFFC8F5D2), ripple = c(0xFF8FE8B5), bgMid = c(0xFF10231A)),
+        Theme("Tide", "Fluid and refreshing", c(0xFF030F18), c(0xFF0A3A4A), c(0xFF0A2431),
+            c(0xFF2B5868), c(0xFF8AF3E6), c(0xFF6FE6D8), c(0xFFDDF4F2), c(0xFF86AEB0),
+            0.85f, 1.0f, true, SoundEnv.GLASS, 4, false, HapticFlavor.RISING,
+            glowColor = c(0xFF2EE6D6), secondaryGlow = c(0xFF7CC8FF), ripple = c(0xFF4FE0E8), bgMid = c(0xFF072633)),
+        Theme("Ink", "True black, minimal and focused", c(0xFF000000), c(0xFF000000), c(0xFF0F0F12),
+            c(0xFF3A3A3D), c(0xFFFFFFFF), c(0xFFE6E6EA), c(0xFFF2F2F4), c(0xFF8E8E94),
+            0f, 0.8f, false, SoundEnv.BELLS, -3, true, HapticFlavor.TICKS,
+            glowColor = c(0xFFFFFFFF), secondaryGlow = c(0xFFC4CAD6), ripple = c(0xFFD8DCE6), bgMid = c(0xFF000000)),
     )
 
     /** Applies accessibility variants on top of a theme. */
     fun adjusted(t: Theme, amoled: Boolean, highContrast: Boolean): Theme {
         var r = t
-        if (amoled) r = r.copy(bgTop = 0xFF000000.toInt(), bgBottom = 0xFF000000.toInt(),
+        if (amoled) r = r.copy(bgTop = 0xFF000000.toInt(), bgBottom = 0xFF000000.toInt(), bgMid = 0xFF000000.toInt(),
             surface = mix(0xFF000000.toInt(), t.surface, 0.6f))
         if (highContrast) r = r.copy(
-            bgBottom = r.bgTop,
+            bgBottom = r.bgTop, bgMid = r.bgTop,
             dot = mix(r.dot, r.text, 0.55f),
             line = r.active,
             muted = mix(r.muted, r.text, 0.5f),

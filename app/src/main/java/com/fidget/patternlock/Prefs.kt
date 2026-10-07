@@ -7,11 +7,11 @@ import android.provider.Settings
 enum class Mode(val label: String, val blurb: String) {
     FREE("Free Draw", "Draw anything. Just enjoy."),
     ENDLESS("Endless Flow", "Keep drawing without stopping."),
+    MIRROR("Mirror Mode", "Draw on one side, see the other."),
+    RIPPLE("Ripple Mode", "Touch and create ripples."),
     CONSTELLATION("Constellation", "Lines rest and drift."),
-    RIPPLE("Ripple", "Touch dots to make ripples."),
-    MIRROR("Mirror", "Draw on one side, see the other."),
+    ZEN("Zen Mode", "Minimal UI. Just the grid."),
     LOOP("Pattern Loop", "Draw once, watch it repeat."),
-    ZEN("Zen", "No interface. Just the grid."),
 }
 
 enum class Difficulty(val label: String) { RELAXED("Relaxed"), CLASSIC("Classic"), FOCUS("Focus") }
@@ -36,8 +36,8 @@ class Prefs(context: Context) {
         get() = i("grid", 3).coerceIn(3, 5)
         set(v) = put { putInt("grid", v) }
     var mode: Mode
-        get() = Mode.values().getOrElse(i("mode3", 0)) { Mode.FREE }.let { if (it == Mode.ZEN) Mode.FREE else it }
-        set(v) = put { putInt("mode3", v.ordinal) }
+        get() = Mode.values().firstOrNull { it.name == raw.getString("mode4", null) }?.let { if (it == Mode.ZEN) Mode.FREE else it } ?: Mode.FREE
+        set(v) = put { putString("mode4", v.name) }
     var mirrorFourWay: Boolean
         get() = b("mirror4", false)
         set(v) = put { putBoolean("mirror4", v) }
