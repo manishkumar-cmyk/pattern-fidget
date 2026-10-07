@@ -30,11 +30,11 @@ fun FidgetBottomBar(active: NavTab, onSelect: (NavTab) -> Unit, modifier: Modifi
     ) {
         NavTab.values().forEach { tab ->
             val on = tab == active
-            GlowCard(Modifier.weight(1f).height(72.dp), selected = on, radius = Radii.r20,
+            GlowCard(Modifier.weight(1f).height(96.dp), selected = on, radius = Radii.r24,
                 onClick = { onSelect(tab) }, description = tab.label) {
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    FidgetIcon(tab.icon, if (on) c.accent else c.textSecondary, size = 26.dp)
-                    FText(tab.label, Modifier.padding(top = Spacing.xs), FidgetType.label, if (on) c.textPrimary else c.textSecondary)
+                    FidgetIcon(tab.icon, if (on) c.accent else c.textSecondary, size = 34.dp)
+                    FText(tab.label, Modifier.padding(top = Spacing.sm), FidgetType.bodyMedium, if (on) c.textPrimary else c.textSecondary)
                 }
             }
         }

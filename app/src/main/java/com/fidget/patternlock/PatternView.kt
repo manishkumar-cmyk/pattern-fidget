@@ -8,6 +8,8 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.graphics.Rect
 import android.os.Bundle
 import android.os.SystemClock
@@ -89,6 +91,8 @@ class PatternView(context: Context) : View(context) {
     var largerDots = false
         set(value) { field = value; computeLayout(); invalidate() }
     var showLines = true
+    /** Draw the line as a smooth curve that follows the finger, instead of straight segments between dots (Zen). */
+    var curvedLines = false
     var quietCompletion = false
     var highContrast = false
     var idleBreathing = true
@@ -166,8 +170,22 @@ class PatternView(context: Context) : View(context) {
     private val ripples = ArrayList<Ripple>()
 
     private class Ghost(val xs: FloatArray, val ys: FloatArray, val start: Long, val life: Float,
-                        val constellation: Boolean, val seed: Float, val color: Int)
+                        val constellation: Boolean, val seed: Float, val color: Int, val curve: Boolean = false)
     private val ghosts = ArrayList<Ghost>()
+
+    // Curved mode: the finger's own path, thinned out, with dot centres pinned into it.
+    private var cvX = FloatArray(360)
+    private var cvY = FloatArray(360)
+    private var cvN = 0
+
+    // Ember: tiny drifting sparks.
+    private val sparkMax = 90
+    private val spX = FloatArray(sparkMax); private val spY = FloatArray(sparkMax)
+    private val spVX = FloatArray(sparkMax); private val spVY = FloatArray(sparkMax)
+    private val spLife = FloatArray(sparkMax); private val spR = FloatArray(sparkMax)
+    private val spStart = LongArray(sparkMax)
+    private var spNext = 0
+    private var lastSpark = 0L
 
     private var completionStart = 0L
     private var completionShape = Shape.OTHER
@@ -191,6 +209,8 @@ class PatternView(context: Context) : View(context) {
         style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
     }
     private val path = Path()
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glowShaders = HashMap<Int, RadialGradient>()
     private var ptsX = FloatArray(32)
     private var ptsY = FloatArray(32)
 
@@ -239,13 +259,14 @@ class PatternView(context: Context) : View(context) {
         // Dots keep a similar physical size whatever the grid.
         dotR = min(spacing * 0.075f, 9f * density) * sizeBoost
         hitR = spacing * 0.36f * (if (largerDots) 1.15f else 1f)
-        lineW = spacing * (if (theme.glow == 0f) 0.028f else 0.042f)
+        lineW = spacing * (if (theme.glow == 0f) 0.02f else 0.024f)
     }
 
     // ---------------------------------------------------------------- public actions
 
     fun clearPattern() {
         selected.clear()
+        cvN = 0
         isSelected.fill(false)
         patternAlpha = 1f
         completionStart = 0L
@@ -498,6 +519,28 @@ class PatternView(context: Context) : View(context) {
         }
         hits.sortBy { it.first }
         for (h in hits) addDot(h.second)
+        if (curvedLines && drawing && selected.isNotEmpty()) addCurvePoint(x1, y1, force = false)
+    }
+
+    private fun spawnSparks(x: Float, y: Float, count: Int) {
+        val now = SystemClock.uptimeMillis()
+        repeat(count) {
+            val k = spNext; spNext = (spNext + 1) % sparkMax
+            val a = Math.random() * 2 * PI
+            val d = (4 + Math.random() * 26).toFloat() * density
+            spX[k] = x + (cos(a) * d).toFloat(); spY[k] = y + (sin(a) * d).toFloat()
+            val v = (6 + Math.random() * 16).toFloat() * density
+            spVX[k] = (cos(a) * v).toFloat() * 0.5f; spVY[k] = (sin(a) * v).toFloat() * 0.5f - 5f * density
+            spLife[k] = 900f + (Math.random() * 1400).toFloat()
+            spR[k] = ((0.7 + Math.random() * 1.3) * density).toFloat()
+            spStart[k] = now
+        }
+    }
+
+    private fun addCurvePoint(x: Float, y: Float, force: Boolean) {
+        if (cvN >= cvX.size - 2) { if (!force) return; cvN-- }
+        if (!force && cvN > 0 && hypot(x - cvX[cvN - 1], y - cvY[cvN - 1]) < 14f * density) return
+        cvX[cvN] = x; cvY[cvN] = y; cvN++
     }
 
     private fun distToSeg(i: Int, x0: Float, y0: Float, dx: Float, dy: Float, len2: Float): Float {
@@ -528,6 +571,8 @@ class PatternView(context: Context) : View(context) {
         isSelected[i] = true
         selected.add(i)
         hitTimes[i] = SystemClock.uptimeMillis()
+        if (curvedLines) addCurvePoint(centersX[i], centersY[i], force = true)
+        if (theme.particles && !reduceMotion) spawnSparks(centersX[i], centersY[i], 7)
         springV[i] += if (reduceMotion) 0f else 6.5f
         addRipple(i, big = false)
         val n = gridSize
@@ -538,12 +583,16 @@ class PatternView(context: Context) : View(context) {
 
     /** Endless Flow: the trail dissolves while the finger keeps going from the current dot. */
     private fun cycleEndless() {
-        addGhost(selected, constellation = false, life = 900f * theme.pace)
+        if (curvedLines && cvN >= 2) {
+            ghosts.add(Ghost(cvX.copyOf(cvN), cvY.copyOf(cvN), SystemClock.uptimeMillis(), 900f * theme.pace, false, 0f, theme.line, curve = true))
+        } else addGhost(selected, constellation = false, life = 900f * theme.pace)
         val keep = selected.last()
         selected.clear()
         isSelected.fill(false)
         selected.add(keep)
         isSelected[keep] = true
+        cvN = 0
+        if (curvedLines) addCurvePoint(centersX[keep], centersY[keep], force = true)
         startCompletion(Shape.OTHER, breatheOnly = true)
         listener?.onCycle()
     }
@@ -706,14 +755,12 @@ class PatternView(context: Context) : View(context) {
             val y = centersY[i] + (fingerY - centersY[i]) / d * lean
             val tint = Themes.mix(t.dot, t.active, 0.3f * prox[i] + allDotsBoost)
             if (t.glow > 0f) {
-                // A faint halo keeps resting dots softly lit.
-                fill.color = Themes.mix(t.dot, t.glowColor, 0.5f + prox[i] * 0.5f)
-                fill.alpha = (255 * restDim * t.glow * (0.10f + 0.22f * prox[i])).toInt()
-                canvas.drawCircle(x, y, dotR * (2.3f + 1.2f * prox[i]) * s, fill)
+                // A faint smooth halo keeps resting dots softly lit.
+                drawGlow(canvas, x, y, dotR * (3.4f + 1.6f * prox[i]) * s, t.glowColor, restDim * t.glow * (0.22f + 0.35f * prox[i]))
             }
-            fill.color = tint
+            fill.color = Themes.mix(tint, 0xFFFFFFFF.toInt(), 0.12f)
             fill.alpha = (255 * restDim).toInt()
-            canvas.drawCircle(x, y, dotR * s, fill)
+            canvas.drawCircle(x, y, dotR * 0.8f * s, fill)
         }
         if (breathing) animating = true
 
@@ -741,7 +788,8 @@ class PatternView(context: Context) : View(context) {
                     canvas.drawCircle(xs[k], ys[k], dotR * 0.9f, fill)
                 }
             } else {
-                drawTrail(canvas, g.xs, g.ys, g.color, 0.7f * (1f - age), 1f, false)
+                if (g.curve) drawCurve(canvas, g.xs, g.ys, g.xs.size, g.color, 0.7f * (1f - age), false)
+                else drawTrail(canvas, g.xs, g.ys, g.color, 0.7f * (1f - age), 1f, false)
             }
         }
 
@@ -755,9 +803,30 @@ class PatternView(context: Context) : View(context) {
             if (p < 0f) continue
             val e = 1f - (1f - p).pow(3)
             stroke.color = t.ripple
-            stroke.alpha = (255 * r.alpha * (1f - p) * restDim).toInt()
+            stroke.alpha = (255 * r.alpha * 0.75f * (1f - p) * restDim).toInt()
             stroke.strokeWidth = (if (t.glow == 0f) 1f else 1.6f) * density * (1.5f - p)
             canvas.drawCircle(r.x, r.y, dotR * 1.4f + (r.maxR - dotR) * e, stroke)
+        }
+
+        // Sparks (Ember): drift and fade, with a gentle twinkle.
+        if (t.particles && !reduceMotion) {
+            if (drawing && now - lastSpark > 70) { lastSpark = now; spawnSparks(tailX, tailY, 1) }
+            for (k in 0 until sparkMax) {
+                if (spLife[k] <= 0f) continue
+                val age = (now - spStart[k]).toFloat()
+                val p = age / spLife[k]
+                if (p >= 1f) { spLife[k] = 0f; continue }
+                animating = true
+                val sec = age / 1000f
+                val tw = 0.6f + 0.4f * sin((now / 180f + k * 1.3f).toDouble()).toFloat()
+                val a = (1f - p) * tw * restDim
+                val sx = spX[k] + spVX[k] * sec
+                val sy = spY[k] + spVY[k] * sec
+                drawGlow(canvas, sx, sy, spR[k] * 4f, t.glowColor, a * 0.5f)
+                fill.color = Themes.mix(t.secondaryGlow, 0xFFFFFFFF.toInt(), 0.4f)
+                fill.alpha = (255 * a).toInt()
+                canvas.drawCircle(sx, sy, spR[k], fill)
+            }
         }
 
         // The pattern itself
@@ -788,7 +857,8 @@ class PatternView(context: Context) : View(context) {
             if (completing && completionShape == Shape.ZIGZAG && !reduceMotion) displaceWave(m, cp)
 
             if (showLines && mode != Mode.RIPPLE) {
-                drawTrail(canvas, ptsX, ptsY, lineColor, alpha, 1f, drawing, m)
+                if (curvedLines && cvN >= 1) drawCurve(canvas, cvX, cvY, cvN, lineColor, alpha, drawing)
+                else drawTrail(canvas, ptsX, ptsY, lineColor, alpha, 1f, drawing, m)
                 if (mode == Mode.MIRROR) for (mi in mirrorMaps()) {
                     val xs = FloatArray(m) { centersX[mi(selected[it])] }
                     val ys = FloatArray(m) { centersY[mi(selected[it])] }
@@ -818,7 +888,7 @@ class PatternView(context: Context) : View(context) {
             if (selected.isNotEmpty()) animating = true
 
             // Travelling light
-            if (completing && !reduceMotion && m >= 2) drawLight(canvas, m, cp, activeColor, alpha)
+            if (completing && !reduceMotion && m >= 2 && !curvedLines) drawLight(canvas, m, cp, activeColor, alpha)
             canvas.restore()
         }
 
@@ -826,30 +896,43 @@ class PatternView(context: Context) : View(context) {
         else if (idleBreathing && !reduceMotion) postInvalidateDelayed(33)
     }
 
+    /** A smooth radial glow: one cached unit gradient per colour, scaled to size, so there are no visible rings. */
+    private fun drawGlow(canvas: Canvas, x: Float, y: Float, r: Float, color: Int, alpha: Float) {
+        if (alpha <= 0.002f || r <= 0f) return
+        val shader = glowShaders.getOrPut(color or 0xFF000000.toInt()) {
+            if (glowShaders.size > 24) glowShaders.clear()
+            val rgb = color and 0x00FFFFFF
+            RadialGradient(0f, 0f, 1f,
+                intArrayOf(rgb or (0xB0 shl 24), rgb or (0x60 shl 24), rgb or (0x22 shl 24), rgb or (0x08 shl 24), rgb),
+                floatArrayOf(0f, 0.25f, 0.55f, 0.82f, 1f), Shader.TileMode.CLAMP)
+        }
+        glowPaint.shader = shader
+        glowPaint.alpha = (255 * alpha).toInt().coerceIn(0, 255)
+        canvas.save()
+        canvas.translate(x, y)
+        canvas.scale(r, r)
+        canvas.drawCircle(0f, 0f, 1f, glowPaint)
+        canvas.restore()
+    }
+
     private fun drawActiveDot(canvas: Canvas, x: Float, y: Float, s: Float, color: Int, alpha: Float, now: Long) {
         val g = theme.glow
         val gc = if (missGlow) color else theme.glowColor
         if (g > 0f) {
             val pulse = if (reduceMotion) 0.5f else 0.5f + 0.5f * sin(2 * PI * (now % 1600) / 1600.0).toFloat()
-            val lift = 1f + 0.6f * brighten
+            val lift = 1f + 0.5f * brighten
             val sc = glowScale * s
-            fill.color = gc
-            fill.alpha = (255 * alpha * g * (0.05f + 0.03f * pulse) * lift).toInt().coerceAtMost(255)
-            canvas.drawCircle(x, y, dotR * 4.6f * sc, fill)
-            fill.alpha = (255 * alpha * g * (0.10f + 0.04f * pulse) * lift).toInt().coerceAtMost(255)
-            canvas.drawCircle(x, y, dotR * 3.2f * sc, fill)
-            fill.color = Themes.mix(gc, theme.secondaryGlow, 0.4f)
-            fill.alpha = (255 * alpha * g * 0.22f * lift).toInt().coerceAtMost(255)
-            canvas.drawCircle(x, y, dotR * 2.2f * sc, fill)
+            drawGlow(canvas, x, y, dotR * 6.2f * sc, gc, alpha * g * (0.42f + 0.1f * pulse) * lift)
+            drawGlow(canvas, x, y, dotR * 3.0f * sc, Themes.mix(gc, theme.secondaryGlow, 0.4f), alpha * g * 0.6f * lift)
         }
-        fill.color = Themes.mix(color, 0xFFFFFFFF.toInt(), 0.25f + 0.35f * brighten)
+        fill.color = Themes.mix(color, 0xFFFFFFFF.toInt(), 0.3f + 0.35f * brighten)
         fill.alpha = (255 * alpha).toInt()
-        canvas.drawCircle(x, y, dotR * 1.45f * s * (1f + 0.12f * brighten), fill)
+        canvas.drawCircle(x, y, dotR * 1.1f * s * (1f + 0.12f * brighten), fill)
         if (highContrast) {
             stroke.color = theme.text
             stroke.alpha = (255 * alpha).toInt()
             stroke.strokeWidth = 2f * density
-            canvas.drawCircle(x, y, dotR * 2.2f * s, stroke)
+            canvas.drawCircle(x, y, dotR * 2.0f * s, stroke)
         }
     }
 
@@ -872,12 +955,12 @@ class PatternView(context: Context) : View(context) {
             val base = lineW * widthScale
             val lift = 1f + 0.5f * brighten
             stroke.color = glowColor
-            stroke.strokeWidth = base * 5.5f * glowScale
-            stroke.alpha = (255 * alpha * g * 0.08f * lift).toInt().coerceAtMost(255)
+            stroke.strokeWidth = base * 6.5f * glowScale
+            stroke.alpha = (255 * alpha * g * 0.07f * lift).toInt().coerceAtMost(255)
             canvas.drawPath(path, stroke)
             stroke.color = Themes.mix(glowColor, theme.secondaryGlow, 0.35f)
-            stroke.strokeWidth = base * 2.6f * glowScale
-            stroke.alpha = (255 * alpha * g * 0.2f * lift).toInt().coerceAtMost(255)
+            stroke.strokeWidth = base * 3.0f * glowScale
+            stroke.alpha = (255 * alpha * g * 0.17f * lift).toInt().coerceAtMost(255)
             canvas.drawPath(path, stroke)
         }
         for (k in 0 until segs) {
@@ -890,6 +973,44 @@ class PatternView(context: Context) : View(context) {
             stroke.alpha = (255 * alpha).toInt()
             canvas.drawLine(x0, y0, x1, y1, stroke)
         }
+    }
+
+    /**
+     * A smooth line through the given points (Catmull-Rom turned into cubic Béziers), ending at the finger when
+     * [live]. Same three layers as [drawTrail]: wide halo, medium glow, crisp core.
+     */
+    private fun drawCurve(canvas: Canvas, xs: FloatArray, ys: FloatArray, n: Int, color: Int, alpha: Float, live: Boolean) {
+        if (n < 1 || alpha <= 0f) return
+        val total = n + if (live) 1 else 0
+        if (total < 2) return
+        fun px(i: Int) = if (i >= n) tailX else xs[i.coerceIn(0, n - 1)]
+        fun py(i: Int) = if (i >= n) tailY else ys[i.coerceIn(0, n - 1)]
+        path.reset()
+        path.moveTo(px(0), py(0))
+        for (i in 0 until total - 1) {
+            val a = (i - 1).coerceAtLeast(0); val d = (i + 2).coerceAtMost(total - 1)
+            path.cubicTo(
+                px(i) + (px(i + 1) - px(a)) / 6f, py(i) + (py(i + 1) - py(a)) / 6f,
+                px(i + 1) - (px(d) - px(i)) / 6f, py(i + 1) - (py(d) - py(i)) / 6f,
+                px(i + 1), py(i + 1))
+        }
+        val g = if (highContrast) 0f else theme.glow
+        val glowColor = if (missGlow) color else theme.glowColor
+        if (g > 0f) {
+            val lift = 1f + 0.5f * brighten
+            stroke.color = glowColor
+            stroke.strokeWidth = lineW * 6.5f * glowScale
+            stroke.alpha = (255 * alpha * g * 0.07f * lift).toInt().coerceAtMost(255)
+            canvas.drawPath(path, stroke)
+            stroke.color = Themes.mix(glowColor, theme.secondaryGlow, 0.35f)
+            stroke.strokeWidth = lineW * 3.0f * glowScale
+            stroke.alpha = (255 * alpha * g * 0.17f * lift).toInt().coerceAtMost(255)
+            canvas.drawPath(path, stroke)
+        }
+        stroke.color = Themes.mix(color, 0xFFFFFFFF.toInt(), 0.2f + 0.3f * brighten)
+        stroke.strokeWidth = lineW
+        stroke.alpha = (255 * alpha).toInt()
+        canvas.drawPath(path, stroke)
     }
 
     private fun drawLight(canvas: Canvas, m: Int, cp: Float, color: Int, alpha: Float) {
@@ -919,9 +1040,7 @@ class PatternView(context: Context) : View(context) {
                 val a = k; val b = (k + 1) % m
                 val x = ptsX[a] + (ptsX[b] - ptsX[a]) * u
                 val y = ptsY[a] + (ptsY[b] - ptsY[a]) * u
-                fill.color = color
-                fill.alpha = (255 * alpha * 0.25f).toInt()
-                canvas.drawCircle(x, y, dotR * 4f * size, fill)
+                drawGlow(canvas, x, y, dotR * 4.5f * size, color, alpha * 0.8f)
                 fill.color = Themes.mix(color, 0xFFFFFFFF.toInt(), 0.6f)
                 fill.alpha = (255 * alpha).toInt()
                 canvas.drawCircle(x, y, dotR * 1.3f * size, fill)

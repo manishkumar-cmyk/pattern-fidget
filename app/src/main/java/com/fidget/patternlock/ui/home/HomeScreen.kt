@@ -2,7 +2,14 @@ package com.fidget.patternlock.ui.home
 
 import android.os.SystemClock
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.BiasAlignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.fidget.patternlock.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -104,14 +111,16 @@ fun HomeScreen(onTab: (NavTab) -> Unit, onSettings: () -> Unit, onZen: () -> Uni
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
+    if (!settings.amoled) HomeBackdrop()
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth().statusBarsPadding().alpha(chromeAlpha).padding(start = Spacing.xxl, end = Spacing.sm, top = Spacing.sm),
             verticalAlignment = Alignment.Top,
         ) {
             Column(Modifier.weight(1f).padding(top = Spacing.sm)) {
-                FText("Pattern Fidget", style = FidgetType.title)
-                FText("A calmer kind of play", Modifier.padding(top = Spacing.xs), FidgetType.body, c.textSecondary)
+                FText("Pattern Fidget", style = FidgetType.display)
+                FText("A calmer kind of play", Modifier.padding(top = Spacing.xs), FidgetType.subtitle, c.textSecondary)
             }
             FidgetIconButton(FidgetIconKind.GEAR, "Settings", onSettings, tint = c.textSecondary)
         }
@@ -120,7 +129,7 @@ fun HomeScreen(onTab: (NavTab) -> Unit, onSettings: () -> Unit, onZen: () -> Uni
             PatternGrid(
                 Modifier.align(Alignment.Center).fillMaxSize().widthIn(max = 560.dp),
                 gridSize = GRID, mode = Mode.FREE, handle = handle, longPress = true, interruptible = true,
-                gridFill = 0.8f, listener = feedback,
+                gridFill = 0.96f, listener = feedback,
             )
             SaveChip(save, Modifier.padding(bottom = Spacing.sm))
         }
@@ -135,6 +144,17 @@ fun HomeScreen(onTab: (NavTab) -> Unit, onSettings: () -> Unit, onZen: () -> Uni
         }
         Box(Modifier.alpha(chromeAlpha)) { FidgetBottomBar(NavTab.DRAW, onSelect = onTab) }
     }
+    }
+}
+
+/** The night sky behind the home grid, tinted by the theme so it stays calm and the glow still reads. */
+@Composable
+private fun HomeBackdrop() {
+    val c = LocalFidget.current
+    Image(painterResource(R.drawable.bg_milkyway), null, Modifier.fillMaxSize(),
+        contentScale = ContentScale.Crop, alignment = BiasAlignment(0.15f, 0f))
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+        listOf(c.bgTop.copy(alpha = 0.68f), c.bgMid.copy(alpha = 0.38f), c.bgBottom.copy(alpha = 0.66f)))))
 }
 
 private fun idlePattern(env: com.fidget.patternlock.data.FidgetEnv): List<Int> {

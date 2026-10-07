@@ -102,10 +102,22 @@ private fun DrawScope.drawIcon(kind: FidgetIconKind, c: Color) {
             seg(14f, 7f, 17f, 10f)
         }
         FidgetIconKind.MEMORY -> {
-            // a thought: a soft loop with a dot
-            drawArc(c, -50f, 280f, false, Offset(4f * u, 4f * u), Size(16f * u, 16f * u), style = line)
-            poly(17f, 2.8f, 17.6f, 7f, 13.4f, 7.6f)
-            dot(12f, 12f, 1.6f)
+            // a brain: two lobes, a centre line and a few folds
+            for (mirror in listOf(false, true)) {
+                fun x(v: Float) = (if (mirror) 24f - v else v) * u
+                val lobe = Path().apply {
+                    moveTo(x(12f), 4.6f * u)
+                    cubicTo(x(9.6f), 2.8f * u, x(6f), 3.8f * u, x(5.7f), 7.2f * u)
+                    cubicTo(x(3.2f), 8f * u, x(3f), 12f * u, x(5.4f), 13.2f * u)
+                    cubicTo(x(4.8f), 16.6f * u, x(8.2f), 19.2f * u, x(10.2f), 17.8f * u)
+                    cubicTo(x(11f), 19.4f * u, x(12f), 19.8f * u, x(12f), 19.8f * u)
+                }
+                drawPath(lobe, c, style = line)
+                val fold1 = Path().apply { moveTo(x(5.7f), 7.2f * u); cubicTo(x(7.8f), 7.2f * u, x(9f), 8.6f * u, x(9f), 10.4f * u) }
+                val fold2 = Path().apply { moveTo(x(5.4f), 13.2f * u); cubicTo(x(7.6f), 13.2f * u, x(9.2f), 12.6f * u, x(9.6f), 11.4f * u) }
+                drawPath(fold1, c, style = line); drawPath(fold2, c, style = line)
+            }
+            seg(12f, 4.6f, 12f, 19.8f)
         }
         FidgetIconKind.COLLECTION -> {
             for ((x, y) in listOf(4f to 4f, 13.5f to 4f, 4f to 13.5f, 13.5f to 13.5f))

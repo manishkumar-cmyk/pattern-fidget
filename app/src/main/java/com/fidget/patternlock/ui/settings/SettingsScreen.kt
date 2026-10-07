@@ -105,6 +105,9 @@ fun SettingsScreen(onBack: () -> Unit, onSeeThemes: () -> Unit) {
             // Sound
             SliderRow("Sound", s.volume, { s.volume = it; env.sound.volume = it }, "Volume", s.soundOn, { s.soundOn = it },
                 onFinished = { env.sound.playDegree(4, 0.7f) })
+            if (env.music.available) {
+                SliderRow("Music", s.musicVolume, { s.musicVolume = it }, "Music volume", s.musicOn, { s.musicOn = it })
+            }
             ToggleRow("Direction-aware notes", s.directional, { s.directional = it }, subtitle = "Upward strokes rise, downward strokes fall")
 
             // Touch

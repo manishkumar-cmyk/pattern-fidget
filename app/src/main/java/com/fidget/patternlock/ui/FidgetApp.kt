@@ -42,13 +42,13 @@ object Routes {
 /** The values that decide how the sound and haptic engines are configured. A change re-applies them. */
 private data class SensesKey(
     val theme: Int, val amoled: Boolean, val contrast: Boolean, val pack: Int, val soundOn: Boolean, val volume: Float,
-    val directional: Boolean, val hapticsOn: Boolean, val hapticLevel: Int,
+    val directional: Boolean, val hapticsOn: Boolean, val hapticLevel: Int, val musicOn: Boolean, val musicVolume: Float,
 )
 
 @Composable
 fun FidgetApp(env: FidgetEnv) {
     val s = env.settings
-    val key = SensesKey(s.themeIndex, s.amoled, s.highContrast, s.soundEnv, s.soundOn, s.volume, s.directional, s.hapticsOn, s.hapticLevel)
+    val key = SensesKey(s.themeIndex, s.amoled, s.highContrast, s.soundEnv, s.soundOn, s.volume, s.directional, s.hapticsOn, s.hapticLevel, s.musicOn, s.musicVolume)
     LaunchedEffect(key) { env.applySenses() }
     FidgetTheme(s.theme) {
         FidgetBackground { AppNav() }

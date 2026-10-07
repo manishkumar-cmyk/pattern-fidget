@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import com.fidget.patternlock.Difficulty
 import com.fidget.patternlock.Haptics
 import com.fidget.patternlock.Mode
+import com.fidget.patternlock.MusicPlayer
 import com.fidget.patternlock.PatternStore
 import com.fidget.patternlock.Prefs
 import com.fidget.patternlock.SoundEngine
@@ -45,6 +46,8 @@ class FidgetSettings(private val prefs: Prefs) {
     /** Ordinal into [SoundEnv], or -1 to follow the theme's preferred pack. */
     var soundEnv by Persisted(prefs.soundEnv) { prefs.soundEnv = it }
     var directional by Persisted(prefs.directional) { prefs.directional = it }
+    var musicOn by Persisted(prefs.musicOn) { prefs.musicOn = it }
+    var musicVolume by Persisted(prefs.musicVolume) { prefs.musicVolume = it }
     var hapticsOn by Persisted(prefs.hapticsOn) { prefs.hapticsOn = it }
     /** 1 = Light, 2 = Medium, 3 = Strong. */
     var hapticLevel by Persisted(prefs.hapticLevel) { prefs.hapticLevel = it }
@@ -70,6 +73,7 @@ class FidgetEnv(context: Context) {
     val store = PatternStore(prefs.raw)
     val sound = SoundEngine(context)
     val haptics = Haptics(context)
+    val music = MusicPlayer(context)
 
     init { applySenses() }
 
@@ -84,6 +88,9 @@ class FidgetEnv(context: Context) {
         haptics.enabled = s.hapticsOn
         haptics.level = s.hapticLevel
         haptics.flavor = t.haptic
+        music.enabled = s.musicOn
+        music.volume = s.musicVolume
+        music.sync()
     }
 
     fun mode(): Mode = settings.mode

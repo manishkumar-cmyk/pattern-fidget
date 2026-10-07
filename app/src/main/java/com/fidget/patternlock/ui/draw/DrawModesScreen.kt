@@ -3,6 +3,9 @@ package com.fidget.patternlock.ui.draw
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
@@ -28,12 +31,13 @@ fun DrawModesScreen(onBack: () -> Unit, onMode: (Mode) -> Unit) {
         LazyVerticalGrid(
             GridCells.Fixed(2),
             Modifier.fillMaxSize().widthIn(max = 640.dp).align(Alignment.CenterHorizontally),
-            contentPadding = PaddingValues(start = Spacing.xl, end = Spacing.xl, top = Spacing.sm, bottom = Spacing.xxxl),
+            contentPadding = PaddingValues(start = Spacing.xl, end = Spacing.xl, top = Spacing.sm,
+                bottom = Spacing.xxxl + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             itemsIndexed(Mode.values().toList()) { i, m ->
-                ModeCard(m, selected = m == settings.mode, offsetMs = i * 650L, onClick = {
+                ModeCard(m, selected = m == Mode.FREE, offsetMs = i * 650L, onClick = {
                     if (m != Mode.ZEN) settings.mode = m
                     onMode(m)
                 })

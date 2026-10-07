@@ -46,6 +46,8 @@ val LocalFidget = compositionLocalOf { FidgetColors(Themes.all[0]) }
 object FidgetType {
     private val sans = FontFamily.SansSerif
     val title = TextStyle(fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 22.sp, letterSpacing = 0.1.sp)
+    val display = TextStyle(fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 32.sp, letterSpacing = 0.2.sp)
+    val subtitle = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 17.sp)
     val screenTitle = TextStyle(fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 18.sp)
     val hero = TextStyle(fontFamily = sans, fontWeight = FontWeight.Light, fontSize = 34.sp, letterSpacing = 0.5.sp)
     val body = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 15.sp)

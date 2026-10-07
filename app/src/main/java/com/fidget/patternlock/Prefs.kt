@@ -63,6 +63,12 @@ class Prefs(context: Context) {
     var hapticLevel: Int
         get() = i("hapticLevel", 2).coerceIn(1, 3)
         set(v) = put { putInt("hapticLevel", v) }
+    var musicOn: Boolean
+        get() = b("music", true)
+        set(v) = put { putBoolean("music", v) }
+    var musicVolume: Float
+        get() = f("musicVolume", 0.5f)
+        set(v) = put { putFloat("musicVolume", v) }
     var showLines: Boolean
         get() = b("lines", true)
         set(v) = put { putBoolean("lines", v) }

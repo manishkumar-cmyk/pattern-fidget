@@ -70,8 +70,7 @@ class LogicTest {
             assertTrue(t.name, t.blurb.isNotBlank())
             assertTrue(t.name, (t.error ushr 24) == 0xFF)
         }
-        assertEquals(5, Themes.all.size)
-        assertEquals(listOf("Dusk", "Fog", "Sage", "Tide", "Ink"), Themes.all.map { it.name })
+        assertEquals(listOf("Dusk", "Fog", "Sage", "Tide", "Ink", "Ember"), Themes.all.map { it.name })
     }
 
     @Test fun marimbaWasAppendedWithoutShiftingSavedChoices() {

@@ -62,6 +62,7 @@ fun PatternGrid(
     interruptible: Boolean = false,
     idleBreathing: Boolean = true,
     mirrorFourWay: Boolean = false,
+    curved: Boolean = false,
     gridFill: Float = 0.84f,
     listener: PatternView.Listener? = null,
 ) {
@@ -85,6 +86,7 @@ fun PatternGrid(
             pv.gridSize = gridSize
             pv.mode = mode
             pv.mirrorFourWay = mirrorFourWay
+            pv.curvedLines = curved
             pv.interactive = interactive
             pv.autoFade = autoFade
             pv.guide = guide

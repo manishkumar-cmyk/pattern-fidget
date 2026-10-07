@@ -38,8 +38,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        env.music.foreground = true
+    }
+
     override fun onPause() {
         super.onPause()
+        env.music.foreground = false
         env.settings.persistTotal()
     }
 }

@@ -84,7 +84,7 @@ fun ZenScreen(onExit: () -> Unit) {
 
     Box(Modifier.fillMaxSize()) {
         PatternGrid(
-            Modifier.fillMaxSize(), gridSize = settings.grid, mode = Mode.ENDLESS, gridFill = 0.86f, listener = feedback,
+            Modifier.fillMaxSize(), gridSize = settings.grid, mode = Mode.ENDLESS, gridFill = 0.86f, curved = true, listener = feedback,
         )
         AnimatedVisibility(visible, Modifier.align(Alignment.TopStart), enter = fadeIn(Motion.slow()), exit = fadeOut(Motion.slow())) {
             FidgetIconButton(FidgetIconKind.BACK, "Leave Zen", onExit, Modifier.statusBarsPadding().padding(Spacing.sm), tint = c.textSecondary)
