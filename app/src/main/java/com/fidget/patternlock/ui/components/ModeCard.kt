@@ -37,17 +37,26 @@ private fun Mode.thumbStyle() = when (this) {
 /** A drawing mode: a quietly animated mini preview, the name and a one-line description. */
 @Composable
 fun ModeCard(mode: Mode, selected: Boolean, offsetMs: Long, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    ModeCardShell(mode.label, mode.blurb, selected, onClick, modifier) {
+        PatternThumb(3, samples.getValue(mode), Modifier.fillMaxWidth().height(76.dp), style = mode.thumbStyle(),
+            offsetMs = offsetMs, sizeFraction = 0.95f)
+    }
+}
+
+/** The card frame shared by every entry in the Draw list. */
+@Composable
+fun ModeCardShell(title: String, blurb: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
+                  art: @Composable () -> Unit) {
     val c = LocalFidget.current
     GlowCard(modifier.fillMaxWidth().heightIn(min = 176.dp), selected = selected, radius = Radii.r24,
-        onClick = onClick, description = "${mode.label}. ${mode.blurb}") {
+        onClick = onClick, description = "$title. $blurb") {
         Column(
             Modifier.fillMaxWidth().padding(Spacing.lg).align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            PatternThumb(3, samples.getValue(mode), Modifier.fillMaxWidth().height(76.dp), style = mode.thumbStyle(),
-                offsetMs = offsetMs, sizeFraction = 0.95f)
-            FText(mode.label, Modifier.padding(top = Spacing.sm), FidgetType.bodyMedium, c.textPrimary, TextAlign.Center)
-            FText(mode.blurb, Modifier.padding(top = Spacing.xs), FidgetType.caption, c.textSecondary, TextAlign.Center)
+            art()
+            FText(title, Modifier.padding(top = Spacing.sm), FidgetType.bodyMedium, c.textPrimary, TextAlign.Center)
+            FText(blurb, Modifier.padding(top = Spacing.xs), FidgetType.caption, c.textSecondary, TextAlign.Center)
         }
     }
 }

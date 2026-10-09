@@ -10,19 +10,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.fidget.patternlock.ui.theme.FidgetType
 import com.fidget.patternlock.ui.theme.LocalFidget
 import com.fidget.patternlock.ui.theme.Radii
 import com.fidget.patternlock.ui.theme.Spacing
 
-enum class NavTab(val label: String, val icon: FidgetIconKind) {
-    DRAW("Draw", FidgetIconKind.DRAW), MEMORY("Memory", FidgetIconKind.MEMORY), COLLECTION("Collection", FidgetIconKind.COLLECTION)
+enum class NavTab(val label: String, val hint: String, val icon: FidgetIconKind, val iconColor: Color?) {
+    DRAW("Draw", "Create calming patterns", FidgetIconKind.DRAW, null),
+    MEMORY("Memory", "Remember and revisit", FidgetIconKind.MEMORY, Color(0xFF8FA8FF)),
+    COLLECTION("Collection", "Explore patterns", FidgetIconKind.COLLECTION, Color(0xFFA08CFF)),
 }
 
-/** Three rounded translucent tiles. The current one is brighter, with an accent icon and a soft glow. */
+/**
+ * Three rounded translucent tiles. The current one is brighter, with an accent border and soft glow.
+ * [detailed] adds a one-line description under each name, as on Home.
+ */
 @Composable
-fun FidgetBottomBar(active: NavTab, onSelect: (NavTab) -> Unit, modifier: Modifier = Modifier) {
+fun FidgetBottomBar(active: NavTab, onSelect: (NavTab) -> Unit, modifier: Modifier = Modifier, detailed: Boolean = false) {
     val c = LocalFidget.current
     Row(
         modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = Spacing.xl, vertical = Spacing.lg),
@@ -30,11 +37,14 @@ fun FidgetBottomBar(active: NavTab, onSelect: (NavTab) -> Unit, modifier: Modifi
     ) {
         NavTab.values().forEach { tab ->
             val on = tab == active
-            GlowCard(Modifier.weight(1f).height(96.dp), selected = on, radius = Radii.r24,
-                onClick = { onSelect(tab) }, description = tab.label) {
-                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    FidgetIcon(tab.icon, if (on) c.accent else c.textSecondary, size = 34.dp)
-                    FText(tab.label, Modifier.padding(top = Spacing.sm), FidgetType.bodyMedium, if (on) c.textPrimary else c.textSecondary)
+            val iconTint = if (on) c.accent else (if (detailed) tab.iconColor else null) ?: c.textSecondary
+            GlowCard(Modifier.weight(1f).height(if (detailed) 124.dp else 96.dp), selected = on, radius = Radii.r24,
+                onClick = { onSelect(tab) }, description = "${tab.label}. ${tab.hint}") {
+                Column(Modifier.align(Alignment.Center).padding(horizontal = Spacing.sm), horizontalAlignment = Alignment.CenterHorizontally) {
+                    FidgetIcon(tab.icon, iconTint, size = 34.dp)
+                    FText(tab.label, Modifier.padding(top = Spacing.sm), FidgetType.bodyMedium, c.textPrimary)
+                    if (detailed) FText(tab.hint, Modifier.padding(top = 2.dp), FidgetType.label.copy(fontSize = androidx.compose.ui.unit.TextUnit(11.5f, androidx.compose.ui.unit.TextUnitType.Sp)),
+                        c.textSecondary, TextAlign.Center)
                 }
             }
         }

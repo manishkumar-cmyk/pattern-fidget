@@ -20,11 +20,16 @@ import com.fidget.patternlock.Mode
 import com.fidget.patternlock.ui.LocalEnv
 import com.fidget.patternlock.ui.components.FidgetTopBar
 import com.fidget.patternlock.ui.components.ModeCard
+import com.fidget.patternlock.ui.components.ModeCardShell
+import com.fidget.patternlock.ui.components.ConstellationArt
+import com.fidget.patternlock.domain.Constellations
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import com.fidget.patternlock.ui.theme.Spacing
 
 /** "Choose a mode": every drawing mode as a card in a calm two-column grid. */
 @Composable
-fun DrawModesScreen(onBack: () -> Unit, onMode: (Mode) -> Unit) {
+fun DrawModesScreen(onBack: () -> Unit, onMode: (Mode) -> Unit, onConstellations: () -> Unit) {
     val settings = LocalEnv.current.settings
     Column(Modifier.fillMaxSize()) {
         FidgetTopBar("Draw", onBack, subtitle = "Choose a mode")
@@ -36,11 +41,16 @@ fun DrawModesScreen(onBack: () -> Unit, onMode: (Mode) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            itemsIndexed(Mode.values().toList()) { i, m ->
+            itemsIndexed(Mode.values().filter { it != Mode.LOOP }) { i, m ->
                 ModeCard(m, selected = m == Mode.FREE, offsetMs = i * 650L, onClick = {
                     if (m != Mode.ZEN) settings.mode = m
                     onMode(m)
                 })
+            }
+            item {
+                ModeCardShell("Trace Constellations", "Connect the stars and learn their story.", false, onConstellations) {
+                    ConstellationArt(Constellations.all[0], Modifier.fillMaxWidth().height(76.dp), pad = 6.dp, unit = 1.2.dp)
+                }
             }
         }
     }

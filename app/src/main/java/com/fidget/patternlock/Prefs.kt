@@ -30,13 +30,13 @@ class Prefs(context: Context) {
     private fun put(block: SharedPreferences.Editor.() -> Unit) = raw.edit().apply(block).apply()
 
     var themeIndex: Int
-        get() = i("theme", 0).coerceIn(0, Themes.all.lastIndex)
+        get() = i("theme", Themes.all.lastIndex).coerceIn(0, Themes.all.lastIndex)
         set(v) = put { putInt("theme", v) }
     var grid: Int
         get() = i("grid", 3).coerceIn(3, 5)
         set(v) = put { putInt("grid", v) }
     var mode: Mode
-        get() = Mode.values().firstOrNull { it.name == raw.getString("mode4", null) }?.let { if (it == Mode.ZEN) Mode.FREE else it } ?: Mode.FREE
+        get() = Mode.values().firstOrNull { it.name == raw.getString("mode4", null) }?.let { if (it == Mode.ZEN || it == Mode.LOOP) Mode.FREE else it } ?: Mode.FREE
         set(v) = put { putString("mode4", v.name) }
     var mirrorFourWay: Boolean
         get() = b("mirror4", false)
@@ -69,6 +69,10 @@ class Prefs(context: Context) {
     var musicVolume: Float
         get() = f("musicVolume", 0.5f)
         set(v) = put { putFloat("musicVolume", v) }
+    /** Ids of constellations the player has traced, comma separated. */
+    var stars: String
+        get() = raw.getString("stars", "") ?: ""
+        set(v) = put { putString("stars", v) }
     var showLines: Boolean
         get() = b("lines", true)
         set(v) = put { putBoolean("lines", v) }

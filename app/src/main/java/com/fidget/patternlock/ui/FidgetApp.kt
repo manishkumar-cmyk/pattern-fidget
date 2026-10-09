@@ -16,6 +16,8 @@ import com.fidget.patternlock.data.FidgetEnv
 import com.fidget.patternlock.ui.collection.CollectionScreen
 import com.fidget.patternlock.ui.collection.PlaybackScreen
 import com.fidget.patternlock.ui.components.FidgetBackground
+import com.fidget.patternlock.ui.constellation.ConstellationListScreen
+import com.fidget.patternlock.ui.constellation.ConstellationPlayScreen
 import com.fidget.patternlock.ui.components.NavTab
 import com.fidget.patternlock.ui.draw.DrawModesScreen
 import com.fidget.patternlock.ui.draw.DrawScreen
@@ -37,6 +39,8 @@ object Routes {
     const val PLAYBACK = "playback/{id}/{loop}"
     const val SETTINGS = "settings"
     const val THEMES = "themes"
+    const val CONSTELLATIONS = "constellations"
+    const val CONSTELLATION = "constellation/{id}"
 }
 
 /** The values that decide how the sound and haptic engines are configured. A change re-applies them. */
@@ -73,11 +77,16 @@ private fun AppNav() {
         popExitTransition = { fadeOut(tween(Motion.Fast, easing = Motion.Easing)) },
     ) {
         composable(Routes.HOME) {
-            HomeScreen(onTab = ::toTab, onSettings = { nav.navigate(Routes.SETTINGS) }, onZen = { nav.navigate(Routes.ZEN) })
+            HomeScreen(
+                onTab = ::toTab, onSettings = { nav.navigate(Routes.SETTINGS) },
+                onStart = { nav.navigate("draw/${Mode.FREE.name}") },
+                onConstellation = { nav.navigate("constellation/$it") },
+            )
         }
         composable(Routes.DRAW) {
             DrawModesScreen(
                 onBack = { nav.popBackStack() },
+                onConstellations = { nav.navigate(Routes.CONSTELLATIONS) },
                 onMode = { m ->
                     if (m == Mode.ZEN) nav.navigate(Routes.ZEN) else nav.navigate("draw/${m.name}")
                 },
@@ -108,6 +117,16 @@ private fun AppNav() {
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(onBack = { nav.popBackStack() }, onSeeThemes = { nav.navigate(Routes.THEMES) })
+        }
+        composable(Routes.CONSTELLATIONS) {
+            ConstellationListScreen(onBack = { nav.popBackStack() }, onOpen = { nav.navigate("constellation/$it") })
+        }
+        composable(Routes.CONSTELLATION, listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+            ConstellationPlayScreen(
+                id = entry.arguments?.getString("id") ?: "",
+                onBack = { nav.popBackStack() },
+                onOpen = { next -> nav.navigate("constellation/$next") { popUpTo(Routes.CONSTELLATIONS) } },
+            )
         }
         composable(Routes.THEMES) { ThemesScreen(onBack = { nav.popBackStack() }) }
     }

@@ -1,163 +1,183 @@
 package com.fidget.patternlock.ui.home
 
-import android.os.SystemClock
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Image
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.BiasAlignment
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import com.fidget.patternlock.R
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.fidget.patternlock.Mode
-import com.fidget.patternlock.Patterns
+import androidx.compose.ui.unit.sp
+import com.fidget.patternlock.domain.Constellation
+import com.fidget.patternlock.domain.Constellations
 import com.fidget.patternlock.domain.formatDotCount
-import com.fidget.patternlock.interaction.GridFeedback
-import com.fidget.patternlock.interaction.SavePrompt
 import com.fidget.patternlock.ui.LocalEnv
+import com.fidget.patternlock.ui.components.ConstellationArt
 import com.fidget.patternlock.ui.components.FText
 import com.fidget.patternlock.ui.components.FidgetBottomBar
-import com.fidget.patternlock.ui.components.FidgetIconButton
+import com.fidget.patternlock.ui.components.FidgetIcon
 import com.fidget.patternlock.ui.components.FidgetIconKind
+import com.fidget.patternlock.ui.components.FidgetLogo
 import com.fidget.patternlock.ui.components.NavTab
-import com.fidget.patternlock.ui.components.PatternGrid
-import com.fidget.patternlock.ui.components.PatternGridHandle
-import com.fidget.patternlock.ui.components.SaveChip
+import com.fidget.patternlock.ui.components.SkyBackdrop
 import com.fidget.patternlock.ui.theme.FidgetType
 import com.fidget.patternlock.ui.theme.LocalFidget
-import com.fidget.patternlock.ui.theme.Motion
 import com.fidget.patternlock.ui.theme.Spacing
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.random.Random
 import java.util.Locale
 
-private const val GRID = 3
+private val Peach = Brush.horizontalGradient(listOf(Color(0xFFFBD9A6), Color(0xFFF0BE80)))
+private val Cream = Color(0xFFEADFD0)
+private val Amber = Color(0xFFF6C27C)
+private val Dusky = Color(0xFFA9B0C8)
 
 @Composable
-fun HomeScreen(onTab: (NavTab) -> Unit, onSettings: () -> Unit, onZen: () -> Unit) {
+fun HomeScreen(
+    onTab: (NavTab) -> Unit, onSettings: () -> Unit, onStart: () -> Unit, onConstellation: (String) -> Unit,
+) {
     val env = LocalEnv.current
     val settings = env.settings
     val c = LocalFidget.current
-    val scope = rememberCoroutineScope()
-    val handle = remember { PatternGridHandle() }
-    val save = remember { SavePrompt(env, scope) }
-    var chromeHidden by remember { mutableStateOf(false) }
-    var restore by remember { mutableStateOf<Job?>(null) }
-    var lastTouch by remember { mutableLongStateOf(SystemClock.uptimeMillis()) }
-    val chromeAlpha by animateFloatAsState(if (chromeHidden) 0f else 1f, Motion.normal(), label = "chrome")
-
-    val feedback = remember {
-        GridFeedback(env, mode = { Mode.FREE }, gridSize = { GRID }).apply {
-            // The ambient animation is silent; only a deliberate replay is heard.
-            playbackAudible = { handle.patternOpacity >= 1f }
-            touchStart = {
-                lastTouch = SystemClock.uptimeMillis()
-                handle.patternOpacity = 1f
-                restore?.cancel()
-                chromeHidden = true
-                save.hide()
-            }
-            touchEnd = {
-                lastTouch = SystemClock.uptimeMillis()
-                restore?.cancel()
-                restore = scope.launch { delay(1500); chromeHidden = false }
-            }
-            released = { pattern, _ -> save.offer(GRID, pattern) }
-            longPressed = { onZen() }
-        }
-    }
-
-    // Ambient idle: after a quiet moment the grid slowly traces a pattern by itself, then fades and begins another.
-    LaunchedEffect(Unit) {
-        delay(1400)
-        while (true) {
-            val quiet = SystemClock.uptimeMillis() - lastTouch > 2500 && handle.currentPattern.isEmpty() &&
-                !handle.isPlaying && !settings.reduceMotion
-            if (quiet) {
-                handle.patternOpacity = 0.5f
-                handle.play(idlePattern(env), 480L) {
-                    handle.celebrate(false)
-                    handle.fadeOut(900L, 1500L) { handle.patternOpacity = 1f }
-                }
-                delay(9000)
-            } else delay(1500)
-        }
-    }
 
     Box(Modifier.fillMaxSize()) {
-    if (!settings.amoled) HomeBackdrop()
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().statusBarsPadding().alpha(chromeAlpha).padding(start = Spacing.xxl, end = Spacing.sm, top = Spacing.sm),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(Modifier.weight(1f).padding(top = Spacing.sm)) {
-                FText("Pattern Fidget", style = FidgetType.display)
-                FText("A calmer kind of play", Modifier.padding(top = Spacing.xs), FidgetType.subtitle, c.textSecondary)
+        if (!settings.amoled) SkyBackdrop()
+        Column(Modifier.fillMaxSize()) {
+            // Header: mark, wordmark and settings.
+            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = Spacing.xl, vertical = Spacing.md),
+                verticalAlignment = Alignment.CenterVertically) {
+                FidgetLogo(size = 48.dp)
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("Pattern") }
+                        withStyle(SpanStyle(fontWeight = FontWeight.Light)) { append(" Fidget") }
+                    },
+                    Modifier.weight(1f).padding(start = Spacing.md), color = c.textPrimary,
+                    style = TextStyle(fontSize = 28.sp, letterSpacing = 0.2.sp),
+                )
+                Box(Modifier.size(48.dp).clip(CircleShape).background(c.surface).border(BorderStroke(1.dp, c.border), CircleShape)
+                    .clickable(role = Role.Button, onClickLabel = "Settings", onClick = onSettings)
+                    .semantics { contentDescription = "Settings" }, contentAlignment = Alignment.Center) {
+                    FidgetIcon(FidgetIconKind.GEAR, c.textPrimary, size = 24.dp)
+                }
             }
-            FidgetIconButton(FidgetIconKind.GEAR, "Settings", onSettings, tint = c.textSecondary)
-        }
 
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            PatternGrid(
-                Modifier.align(Alignment.Center).fillMaxSize().widthIn(max = 560.dp),
-                gridSize = GRID, mode = Mode.FREE, handle = handle, longPress = true, interruptible = true,
-                gridFill = 0.96f, listener = feedback,
-            )
-            SaveChip(save, Modifier.padding(bottom = Spacing.sm))
-        }
+            // Headline.
+            Column(Modifier.fillMaxWidth().padding(top = Spacing.lg), horizontalAlignment = Alignment.CenterHorizontally) {
+                FText("Draw patterns.", style = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.Medium), color = Cream, align = TextAlign.Center)
+                FText("Find your calm.", style = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.Medium), color = Amber, align = TextAlign.Center)
+                FText("CONNECT  •  BREATHE  •  RELAX", Modifier.padding(top = Spacing.md),
+                    TextStyle(fontSize = 13.sp, letterSpacing = 3.sp), Dusky, TextAlign.Center)
+            }
 
-        Column(
-            Modifier.fillMaxWidth().alpha(chromeAlpha).padding(bottom = Spacing.xs)
-                .semantics(mergeDescendants = true) { contentDescription = "${formatDotCount(settings.totalDots)} dots connected" },
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            FText(formatDotCount(settings.totalDots, Locale.getDefault()), style = FidgetType.hero, align = TextAlign.Center)
-            FText("dots connected", style = FidgetType.caption, color = c.textSecondary)
+            // Constellations draw themselves here, one after another.
+            ConstellationShowcase(Modifier.weight(1f).fillMaxWidth(), onConstellation)
+
+            // Lifetime count.
+            Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = "${formatDotCount(settings.totalDots)} dots connected" },
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                FText(formatDotCount(settings.totalDots, Locale.getDefault()), style = TextStyle(fontSize = 42.sp, fontWeight = FontWeight.Medium), color = Cream)
+                FText("DOTS CONNECTED", Modifier.padding(top = 2.dp), TextStyle(fontSize = 12.sp, letterSpacing = 3.sp), Dusky)
+            }
+
+            // Start drawing.
+            val shape = RoundedCornerShape(36.dp)
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = Spacing.xxl).padding(top = Spacing.lg).height(64.dp)
+                    .shadow(20.dp, shape, ambientColor = Amber, spotColor = Amber).clip(shape).background(Peach)
+                    .clickable(role = Role.Button, onClick = onStart),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.weight(1f).padding(start = Spacing.xxl)) { FidgetIcon(FidgetIconKind.PLAY, Color(0xFF14110C), size = 28.dp) }
+                FText("Start Drawing", style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium), color = Color(0xFF14110C))
+                Box(Modifier.weight(1f).padding(end = Spacing.xxl), contentAlignment = Alignment.CenterEnd) {
+                    FidgetIcon(FidgetIconKind.CHEVRON, Color(0xFF14110C), size = 24.dp)
+                }
+            }
+            FidgetBottomBar(NavTab.DRAW, onSelect = onTab, detailed = true)
         }
-        Box(Modifier.alpha(chromeAlpha)) { FidgetBottomBar(NavTab.DRAW, onSelect = onTab) }
-    }
     }
 }
 
-/** The night sky behind the home grid, tinted by the theme so it stays calm and the glow still reads. */
+/**
+ * Shows the constellations one after another in random order: stars appear, lines draw themselves, the name
+ * fades in, and everything dissolves before the next one begins. Tap to trace the one on screen.
+ */
 @Composable
-private fun HomeBackdrop() {
+private fun ConstellationShowcase(modifier: Modifier, onOpen: (String) -> Unit) {
+    val env = LocalEnv.current
+    val reduce = env.settings.reduceMotion
     val c = LocalFidget.current
-    Image(painterResource(R.drawable.bg_milkyway), null, Modifier.fillMaxSize(),
-        contentScale = ContentScale.Crop, alignment = BiasAlignment(0.15f, 0f))
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-        listOf(c.bgTop.copy(alpha = 0.68f), c.bgMid.copy(alpha = 0.38f), c.bgBottom.copy(alpha = 0.66f)))))
-}
+    var current by remember { mutableStateOf<Constellation?>(null) }
+    val progress = remember { Animatable(0f) }
+    val fade = remember { Animatable(0f) }
 
-private fun idlePattern(env: com.fidget.patternlock.data.FidgetEnv): List<Int> {
-    val fav = env.settings.homePattern.takeIf { it != 0L }?.let { env.store.get(it) }
-    return if (fav != null && fav.n == GRID) fav.dots else Patterns.random(GRID, Random.nextInt(4, 8))
+    LaunchedEffect(reduce) {
+        val bag = ArrayDeque<Constellation>()
+        var last: Constellation? = null
+        while (true) {
+            if (bag.isEmpty()) {
+                val shuffled = Constellations.all.shuffled()
+                bag.addAll(if (shuffled.first() == last) shuffled.drop(1) + shuffled.first() else shuffled)
+            }
+            val next = bag.removeFirst()
+            last = next
+            current = next
+            progress.snapTo(if (reduce) 1f else 0f)
+            fade.snapTo(0f)
+            fade.animateTo(1f, tween(800))
+            if (!reduce) progress.animateTo(1f, tween(next.edges.size * 480 + 500, easing = LinearEasing))
+            delay(3400)
+            fade.animateTo(0f, tween(900))
+            delay(250)
+        }
+    }
+
+    val cons = current
+    Box(modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, enabled = cons != null) {
+        cons?.let { onOpen(it.id) }
+    }.semantics { contentDescription = cons?.let { "${it.name} constellation. Tap to trace it." } ?: "Constellations" }) {
+        if (cons != null) {
+            ConstellationArt(cons, Modifier.fillMaxSize(), progress = progress.value, alpha = fade.value, decor = true, pad = 44.dp, unit = 1.9.dp)
+            Column(Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.sm).alpha(fade.value), horizontalAlignment = Alignment.CenterHorizontally) {
+                FText(cons.name, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium), color = Cream)
+                FText(cons.keyword.uppercase(), style = TextStyle(fontSize = 11.sp, letterSpacing = 2.5.sp), color = Dusky)
+            }
+        }
+    }
 }

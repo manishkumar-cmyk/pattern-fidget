@@ -61,6 +61,10 @@ class FidgetSettings(private val prefs: Prefs) {
     var totalDots by mutableLongStateOf(prefs.totalDots)
     fun persistTotal() { prefs.totalDots = totalDots }
 
+    /** Constellations the player has traced. */
+    var discovered by mutableStateOf(prefs.stars.split(',').filter { it.isNotBlank() }.toSet())
+    fun persistDiscovered() { prefs.stars = discovered.joinToString(",") }
+
     val baseTheme: Theme get() = Themes.all[themeIndex]
     val theme: Theme get() = Themes.adjusted(baseTheme, amoled, highContrast)
     val soundPack: SoundEnv get() = SoundEnv.values().getOrNull(soundEnv) ?: baseTheme.sound

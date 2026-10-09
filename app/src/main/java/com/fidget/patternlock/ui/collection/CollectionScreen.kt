@@ -150,11 +150,6 @@ fun CollectionScreen(onTab: (NavTab) -> Unit, onOpen: (id: Long, loop: Boolean) 
             onLoop = { options = null; onOpen(p.id, true) },
             onFavorite = { env.store.update(p.copy(favorite = !p.favorite)); options = null; refresh() },
             onRename = { options = null; renaming = p },
-            onHome = {
-                val isHome = env.settings.homePattern == p.id
-                env.settings.homePattern = if (isHome) 0L else p.id
-                options = null
-            },
             onDelete = {
                 env.store.remove(p.id)
                 if (env.settings.homePattern == p.id) env.settings.homePattern = 0L
@@ -209,11 +204,10 @@ private fun SmallAction(icon: FidgetIconKind, description: String, tint: Color, 
 @Composable
 private fun PatternOptionsSheet(
     p: SavedPattern, onDismiss: () -> Unit, onLoop: () -> Unit, onFavorite: () -> Unit, onRename: () -> Unit,
-    onHome: () -> Unit, onDelete: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val env = LocalEnv.current
     val c = LocalFidget.current
-    val isHome = env.settings.homePattern == p.id
     var armed by remember { mutableStateOf(false) }
     ModalBottomSheet(
         onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -224,8 +218,6 @@ private fun PatternOptionsSheet(
             OptionRow("Play on loop", null, onLoop)
             OptionRow(if (p.favorite) "Remove from favourites" else "Add to favourites", null, onFavorite)
             OptionRow("Rename", "Up to 24 characters", onRename)
-            OptionRow(if (isHome) "Stop using as home animation" else "Use as home animation",
-                if (isHome) null else "Plays softly on the home grid when it's resting", onHome)
             OptionRow(if (armed) "Tap again to delete" else "Delete", null, { if (armed) onDelete() else armed = true },
                 color = if (armed) c.error else c.textPrimary)
         }

@@ -1,5 +1,6 @@
 package com.fidget.patternlock
 
+import com.fidget.patternlock.domain.Constellations
 import com.fidget.patternlock.domain.MemoryGameEngine
 import com.fidget.patternlock.domain.formatDotCount
 import com.fidget.patternlock.domain.patternMeta
@@ -71,11 +72,38 @@ class LogicTest {
             assertTrue(t.name, (t.error ushr 24) == 0xFF)
         }
         assertEquals(listOf("Dusk", "Fog", "Sage", "Tide", "Ink", "Ember"), Themes.all.map { it.name })
+        assertEquals("Ember", Themes.all.last().name)
     }
 
     @Test fun marimbaWasAppendedWithoutShiftingSavedChoices() {
         assertEquals(0, SoundEnv.CHIME.ordinal)
         assertEquals(8, SoundEnv.BUBBLES.ordinal)
         assertEquals(9, SoundEnv.MARIMBA.ordinal)
+    }
+
+    @Test fun constellationsAreWellFormed() {
+        assertEquals(18, Constellations.all.size)
+        assertEquals(18, Constellations.all.map { it.id }.toSet().size)
+        for (c in Constellations.all) {
+            assertTrue(c.name, c.description.length > 40 && c.keyword.isNotBlank())
+            assertTrue(c.name, c.edges.all { (a, b) -> a != b && a in c.stars.indices && b in c.stars.indices })
+            // every star is part of the drawing, and no line is listed twice
+            assertEquals(c.name, c.stars.indices.toSet(), c.edges.flatMap { listOf(it.first, it.second) }.toSet())
+            assertEquals(c.name, c.edges.size, c.edges.map { setOf(it.first, it.second) }.toSet().size)
+        }
+    }
+
+    @Test fun constellationEdgesAreFoundInEitherDirection() {
+        val orion = Constellations.byId("orion")!!
+        assertTrue(orion.edgeBetween(0, 1) >= 0)
+        assertEquals(orion.edgeBetween(0, 1), orion.edgeBetween(1, 0))
+        assertEquals(-1, orion.edgeBetween(0, 5))
+    }
+
+    @Test fun nextConstellationSkipsTracedOnes() {
+        val all = Constellations.all
+        val traced = setOf(all[1].id, all[2].id)
+        assertEquals(all[3].id, Constellations.next(all[0].id, traced).id)
+        assertEquals(all[1].id, Constellations.next(all[0].id, all.map { it.id }.toSet()).id)
     }
 }

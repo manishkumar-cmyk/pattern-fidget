@@ -21,7 +21,7 @@ import kotlin.math.sin
 
 enum class FidgetIconKind {
     BACK, GEAR, TUNE, DRAW, MEMORY, COLLECTION, HEART, HEART_OUTLINE, PLAY, MORE, SEARCH, CLOSE,
-    INFINITY, MIRROR, RIPPLE, CONSTELLATION, ZEN, EYE, RETRY, HOME, LOOP, CHECK, CHART, BELL, PIANO, MARIMBA, BUBBLES, WAVE,
+    INFINITY, MIRROR, RIPPLE, CONSTELLATION, ZEN, EYE, RETRY, HOME, LOOP, CHECK, CHART, BELL, PIANO, MARIMBA, BUBBLES, WAVE, CHEVRON,
 }
 
 /** Thin line icons drawn on a 24-unit canvas, so the app needs no image assets. */
@@ -80,6 +80,7 @@ private fun DrawScope.drawIcon(kind: FidgetIconKind, c: Color) {
             }
             drawPath(w, c, style = line)
         }
+        FidgetIconKind.CHEVRON -> poly(9f, 5f, 16f, 12f, 9f, 19f)
         FidgetIconKind.CHART -> { seg(6f, 19f, 6f, 12f); seg(12f, 19f, 12f, 5f); seg(18f, 19f, 18f, 9f) }
         FidgetIconKind.CHECK -> poly(5f, 12.5f, 10f, 17.5f, 19f, 7f)
         FidgetIconKind.GEAR -> {
