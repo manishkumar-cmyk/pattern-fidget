@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 import android.provider.Settings
 
 enum class Mode(val label: String, val blurb: String) {
-    FREE("Free Draw", "Draw anything. Just enjoy."),
+    FREE("Draw", "Draw anything. Just enjoy."),
     ENDLESS("Endless Flow", "Keep drawing without stopping."),
     MIRROR("Mirror Mode", "Draw on one side, see the other."),
     RIPPLE("Ripple Mode", "Touch and create ripples."),
@@ -99,6 +99,9 @@ class Prefs(context: Context) {
     var difficulty: Difficulty
         get() = Difficulty.values().getOrElse(i("difficulty", 1)) { Difficulty.CLASSIC }
         set(v) = put { putInt("difficulty", v.ordinal) }
+    /** How many dots the current Memory pattern has, per grid size, so a session continues where it stopped. */
+    fun memoryLength(n: Int) = i("memLen_$n", 0)
+    fun setMemoryLength(n: Int, v: Int) = put { putInt("memLen_$n", v) }
     fun best(d: Difficulty, n: Int) = i("best_${d.name}_$n", 0)
     fun setBest(d: Difficulty, n: Int, v: Int) = put { putInt("best_${d.name}_$n", v) }
 

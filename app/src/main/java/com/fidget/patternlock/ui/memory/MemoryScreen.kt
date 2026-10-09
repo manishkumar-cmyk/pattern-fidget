@@ -1,5 +1,6 @@
 package com.fidget.patternlock.ui.memory
 
+import com.fidget.patternlock.ui.theme.bottomInsets
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
@@ -65,7 +65,7 @@ fun MemoryScreen(onBack: () -> Unit) {
     val n = settings.grid
     val scope = rememberCoroutineScope()
     val handle = remember { PatternGridHandle() }
-    val engine = remember(n) { MemoryGameEngine(n) }
+    val engine = remember(n) { MemoryGameEngine(n, resumeAt = env.prefs.memoryLength(n)) }
 
     var phase by remember { mutableStateOf(Phase.WATCH) }
     var level by remember { mutableIntStateOf(1) }
@@ -111,7 +111,7 @@ fun MemoryScreen(onBack: () -> Unit) {
         watch()
     }
 
-    fun startFresh() { engine.reset(); startRound() }
+    fun startFresh() { engine.reset(); env.prefs.setMemoryLength(n, engine.length); startRound() }
 
     fun tryAgain() {
         job?.cancel()
@@ -135,6 +135,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                             env.prefs.setBest(settings.difficulty, n, engine.target.size)
                         }
                         engine.advance()
+                        env.prefs.setMemoryLength(n, engine.length)
                         job = scope.launch { delay(1700); startRound() }
                     } else {
                         phase = Phase.MISSED
@@ -180,7 +181,7 @@ fun MemoryScreen(onBack: () -> Unit) {
             }
         }
 
-        Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.xl).padding(top = Spacing.sm, bottom = Spacing.xl).navigationBarsPadding()
+        Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.xl).padding(top = Spacing.sm, bottom = Spacing.xl).bottomInsets()
             .align(Alignment.CenterHorizontally)) {
             AnimatedContent(phase, Modifier.align(Alignment.Center).widthIn(max = 560.dp), label = "bottom",
                 transitionSpec = { fadeIn(Motion.normal()) togetherWith fadeOut(Motion.fast()) }) { p ->

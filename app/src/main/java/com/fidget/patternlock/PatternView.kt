@@ -173,10 +173,14 @@ class PatternView(context: Context) : View(context) {
                         val constellation: Boolean, val seed: Float, val color: Int, val curve: Boolean = false)
     private val ghosts = ArrayList<Ghost>()
 
-    // Curved mode: the finger's own path, thinned out, with dot centres pinned into it.
-    private var cvX = FloatArray(360)
-    private var cvY = FloatArray(360)
-    private var cvN = 0
+    // Curved mode: every segment between two dots bows the way the finger actually travelled, so the line is
+    // always smooth, always passes exactly through the dot centres, and never loops or kinks.
+    private val segCx = FloatArray(32)
+    private val segCy = FloatArray(32)
+    private val trX = FloatArray(64)
+    private val trY = FloatArray(64)
+    private var trN = 0
+    private val ctl = FloatArray(2)
 
     // Ember: tiny drifting sparks.
     private val sparkMax = 90
@@ -266,7 +270,7 @@ class PatternView(context: Context) : View(context) {
 
     fun clearPattern() {
         selected.clear()
-        cvN = 0
+        trN = 0
         isSelected.fill(false)
         patternAlpha = 1f
         completionStart = 0L
@@ -519,7 +523,7 @@ class PatternView(context: Context) : View(context) {
         }
         hits.sortBy { it.first }
         for (h in hits) addDot(h.second)
-        if (curvedLines && drawing && selected.isNotEmpty()) addCurvePoint(x1, y1, force = false)
+        if (curvedLines && drawing && selected.isNotEmpty()) pushTrail(x1, y1)
     }
 
     private fun spawnSparks(x: Float, y: Float, count: Int) {
@@ -537,10 +541,35 @@ class PatternView(context: Context) : View(context) {
         }
     }
 
-    private fun addCurvePoint(x: Float, y: Float, force: Boolean) {
-        if (cvN >= cvX.size - 2) { if (!force) return; cvN-- }
-        if (!force && cvN > 0 && hypot(x - cvX[cvN - 1], y - cvY[cvN - 1]) < 14f * density) return
-        cvX[cvN] = x; cvY[cvN] = y; cvN++
+    /** Remembers where the finger went since the last dot, thinned to one sample every few dp. */
+    private fun pushTrail(x: Float, y: Float) {
+        if (trN > 0 && hypot(x - trX[trN - 1], y - trY[trN - 1]) < 6f * density) return
+        if (trN == trX.size) {
+            for (k in 0 until trN / 2) { trX[k] = trX[2 * k]; trY[k] = trY[2 * k] }
+            trN /= 2
+        }
+        trX[trN] = x; trY[trN] = y; trN++
+    }
+
+    /**
+     * The control point of a quadratic curve from (ax, ay) to (bx, by) that bows the way the trail went.
+     * It uses the average sideways offset, not the extreme, so one jittery sample can't kink the line, and
+     * it ignores tiny wobbles so straight swipes stay straight.
+     */
+    private fun bowControl(ax: Float, ay: Float, bx: Float, by: Float) {
+        val mx = (ax + bx) / 2f; val my = (ay + by) / 2f
+        ctl[0] = mx; ctl[1] = my
+        val dx = bx - ax; val dy = by - ay
+        val len = hypot(dx, dy)
+        if (len < 8f * density || trN == 0) return
+        val nx = -dy / len; val ny = dx / len
+        var sum = 0f
+        for (k in 0 until trN) sum += (trX[k] - ax) * nx + (trY[k] - ay) * ny
+        // A parabola's mean offset is two thirds of its peak, and a quadratic's control sits at twice the peak.
+        var off = sum / trN * 3f
+        if (abs(off) < len * 0.04f) return
+        off = off.coerceIn(-len * 0.4f, len * 0.4f)
+        ctl[0] = mx + nx * off; ctl[1] = my + ny * off
     }
 
     private fun distToSeg(i: Int, x0: Float, y0: Float, dx: Float, dy: Float, len2: Float): Float {
@@ -571,7 +600,14 @@ class PatternView(context: Context) : View(context) {
         isSelected[i] = true
         selected.add(i)
         hitTimes[i] = SystemClock.uptimeMillis()
-        if (curvedLines) addCurvePoint(centersX[i], centersY[i], force = true)
+        if (curvedLines && selected.size in 2..31) {
+            val k = selected.size - 1
+            val a = selected[k - 1]
+            if (!fromPlayback && drawing) bowControl(centersX[a], centersY[a], centersX[i], centersY[i])
+            else { ctl[0] = (centersX[a] + centersX[i]) / 2f; ctl[1] = (centersY[a] + centersY[i]) / 2f }
+            segCx[k] = ctl[0]; segCy[k] = ctl[1]
+            trN = 0
+        }
         if (theme.particles && !reduceMotion) spawnSparks(centersX[i], centersY[i], 7)
         springV[i] += if (reduceMotion) 0f else 6.5f
         addRipple(i, big = false)
@@ -583,16 +619,13 @@ class PatternView(context: Context) : View(context) {
 
     /** Endless Flow: the trail dissolves while the finger keeps going from the current dot. */
     private fun cycleEndless() {
-        if (curvedLines && cvN >= 2) {
-            ghosts.add(Ghost(cvX.copyOf(cvN), cvY.copyOf(cvN), SystemClock.uptimeMillis(), 900f * theme.pace, false, 0f, theme.line, curve = true))
-        } else addGhost(selected, constellation = false, life = 900f * theme.pace)
+        addGhost(selected, constellation = false, life = 900f * theme.pace)
         val keep = selected.last()
         selected.clear()
         isSelected.fill(false)
         selected.add(keep)
         isSelected[keep] = true
-        cvN = 0
-        if (curvedLines) addCurvePoint(centersX[keep], centersY[keep], force = true)
+        trN = 0
         startCompletion(Shape.OTHER, breatheOnly = true)
         listener?.onCycle()
     }
@@ -788,8 +821,7 @@ class PatternView(context: Context) : View(context) {
                     canvas.drawCircle(xs[k], ys[k], dotR * 0.9f, fill)
                 }
             } else {
-                if (g.curve) drawCurve(canvas, g.xs, g.ys, g.xs.size, g.color, 0.7f * (1f - age), false)
-                else drawTrail(canvas, g.xs, g.ys, g.color, 0.7f * (1f - age), 1f, false)
+                drawTrail(canvas, g.xs, g.ys, g.color, 0.7f * (1f - age), 1f, false)
             }
         }
 
@@ -857,7 +889,7 @@ class PatternView(context: Context) : View(context) {
             if (completing && completionShape == Shape.ZIGZAG && !reduceMotion) displaceWave(m, cp)
 
             if (showLines && mode != Mode.RIPPLE) {
-                if (curvedLines && cvN >= 1) drawCurve(canvas, cvX, cvY, cvN, lineColor, alpha, drawing)
+                if (curvedLines) drawBow(canvas, lineColor, alpha, drawing)
                 else drawTrail(canvas, ptsX, ptsY, lineColor, alpha, 1f, drawing, m)
                 if (mode == Mode.MIRROR) for (mi in mirrorMaps()) {
                     val xs = FloatArray(m) { centersX[mi(selected[it])] }
@@ -976,23 +1008,19 @@ class PatternView(context: Context) : View(context) {
     }
 
     /**
-     * A smooth line through the given points (Catmull-Rom turned into cubic Béziers), ending at the finger when
-     * [live]. Same three layers as [drawTrail]: wide halo, medium glow, crisp core.
+     * The curved line: dot to dot along quadratic curves that bow with the finger, then on to the finger itself
+     * while it is down. Same three layers as [drawTrail]: wide halo, medium glow, crisp core.
      */
-    private fun drawCurve(canvas: Canvas, xs: FloatArray, ys: FloatArray, n: Int, color: Int, alpha: Float, live: Boolean) {
-        if (n < 1 || alpha <= 0f) return
-        val total = n + if (live) 1 else 0
-        if (total < 2) return
-        fun px(i: Int) = if (i >= n) tailX else xs[i.coerceIn(0, n - 1)]
-        fun py(i: Int) = if (i >= n) tailY else ys[i.coerceIn(0, n - 1)]
+    private fun drawBow(canvas: Canvas, color: Int, alpha: Float, live: Boolean) {
+        val m = selected.size
+        if (m < 1 || alpha <= 0f || (m < 2 && !live)) return
         path.reset()
-        path.moveTo(px(0), py(0))
-        for (i in 0 until total - 1) {
-            val a = (i - 1).coerceAtLeast(0); val d = (i + 2).coerceAtMost(total - 1)
-            path.cubicTo(
-                px(i) + (px(i + 1) - px(a)) / 6f, py(i) + (py(i + 1) - py(a)) / 6f,
-                px(i + 1) - (px(d) - px(i)) / 6f, py(i + 1) - (py(d) - py(i)) / 6f,
-                px(i + 1), py(i + 1))
+        path.moveTo(centersX[selected[0]], centersY[selected[0]])
+        for (k in 1 until m) path.quadTo(segCx[k], segCy[k], centersX[selected[k]], centersY[selected[k]])
+        if (live) {
+            val a = selected[m - 1]
+            bowControl(centersX[a], centersY[a], tailX, tailY)
+            path.quadTo(ctl[0], ctl[1], tailX, tailY)
         }
         val g = if (highContrast) 0f else theme.glow
         val glowColor = if (missGlow) color else theme.glowColor

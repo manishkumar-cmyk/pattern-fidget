@@ -1,5 +1,8 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.fidget.patternlock.ui.constellation
 
+import com.fidget.patternlock.ui.theme.bottomInsets
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,8 +21,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -84,7 +86,7 @@ fun ConstellationListScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
             LazyVerticalGrid(
                 GridCells.Fixed(2), Modifier.fillMaxSize().widthIn(max = 640.dp).align(Alignment.CenterHorizontally),
                 contentPadding = PaddingValues(start = Spacing.xl, end = Spacing.xl, top = Spacing.sm,
-                    bottom = Spacing.xxxl + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+                    bottom = Spacing.xxxl + WindowInsets.navigationBarsIgnoringVisibility.asPaddingValues().calculateBottomPadding()),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 items(Constellations.all, key = { it.id }) { cons ->
@@ -258,7 +260,7 @@ fun ConstellationPlayScreen(id: String, onBack: () -> Unit, onOpen: (String) -> 
 @Composable
 private fun StoryCard(cons: Constellation, onNext: () -> Unit, onAll: () -> Unit) {
     val c = LocalFidget.current
-    GlowCard(Modifier.fillMaxWidth().widthIn(max = 640.dp).padding(horizontal = Spacing.lg, vertical = Spacing.lg).navigationBarsPadding(),
+    GlowCard(Modifier.fillMaxWidth().widthIn(max = 640.dp).padding(horizontal = Spacing.lg, vertical = Spacing.lg).bottomInsets(),
         radius = Radii.r28, tint = Color(Themes.mix(c.theme.bgTop, c.theme.surface, 0.7f)).copy(alpha = 0.94f)) {
         Column(Modifier.padding(Spacing.xl)) {
             FText(cons.keyword.uppercase(), style = TextStyle(fontSize = 12.sp, letterSpacing = 3.sp), color = c.accent)

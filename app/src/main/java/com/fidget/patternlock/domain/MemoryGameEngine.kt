@@ -8,10 +8,13 @@ import kotlin.random.Random
  * The rules of Memory, with no UI in it. A pattern is shown, the player draws it back, and a match makes the
  * next pattern one dot longer. There are no timers, lives or scores.
  */
-class MemoryGameEngine(private val n: Int, private val random: Random = Random.Default) {
+class MemoryGameEngine(private val n: Int, private val random: Random = Random.Default, resumeAt: Int = 0) {
 
     val startLength = if (n == 3) 3 else 4
-    private var length = startLength
+
+    /** Dots in the current pattern. Saved between sessions so the player can pick up where they left off. */
+    var length = resumeAt.coerceIn(startLength, n * n)
+        private set
 
     var target: List<Int> = emptyList()
         private set

@@ -21,7 +21,6 @@ import com.fidget.patternlock.ui.constellation.ConstellationPlayScreen
 import com.fidget.patternlock.ui.components.NavTab
 import com.fidget.patternlock.ui.draw.DrawModesScreen
 import com.fidget.patternlock.ui.draw.DrawScreen
-import com.fidget.patternlock.ui.draw.ZenScreen
 import com.fidget.patternlock.ui.home.HomeScreen
 import com.fidget.patternlock.ui.memory.MemoryScreen
 import com.fidget.patternlock.ui.settings.SettingsScreen
@@ -33,7 +32,6 @@ object Routes {
     const val HOME = "home"
     const val DRAW = "draw"
     const val DRAW_MODE = "draw/{mode}"
-    const val ZEN = "zen"
     const val MEMORY = "memory"
     const val COLLECTION = "collection"
     const val PLAYBACK = "playback/{id}/{loop}"
@@ -79,7 +77,6 @@ private fun AppNav() {
         composable(Routes.HOME) {
             HomeScreen(
                 onTab = ::toTab, onSettings = { nav.navigate(Routes.SETTINGS) },
-                onStart = { nav.navigate("draw/${Mode.FREE.name}") },
                 onConstellation = { nav.navigate("constellation/$it") },
             )
         }
@@ -87,16 +84,13 @@ private fun AppNav() {
             DrawModesScreen(
                 onBack = { nav.popBackStack() },
                 onConstellations = { nav.navigate(Routes.CONSTELLATIONS) },
-                onMode = { m ->
-                    if (m == Mode.ZEN) nav.navigate(Routes.ZEN) else nav.navigate("draw/${m.name}")
-                },
+                onMode = { m -> nav.navigate("draw/${m.name}") },
             )
         }
         composable(Routes.DRAW_MODE, listOf(navArgument("mode") { type = NavType.StringType })) { entry ->
             val mode = Mode.values().firstOrNull { it.name == entry.arguments?.getString("mode") } ?: Mode.FREE
             DrawScreen(mode, onBack = { nav.popBackStack() })
         }
-        composable(Routes.ZEN) { ZenScreen(onExit = { nav.popBackStack() }) }
         composable(Routes.MEMORY) { MemoryScreen(onBack = { nav.popBackStack() }) }
         composable(Routes.COLLECTION) {
             CollectionScreen(

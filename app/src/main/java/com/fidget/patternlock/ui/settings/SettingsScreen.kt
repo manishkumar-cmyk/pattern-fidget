@@ -1,5 +1,6 @@
 package com.fidget.patternlock.ui.settings
 
+import com.fidget.patternlock.ui.theme.bottomInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -71,7 +71,7 @@ fun SettingsScreen(onBack: () -> Unit, onSeeThemes: () -> Unit) {
         FidgetTopBar("Settings", onBack)
         Column(
             Modifier.weight(1f).widthIn(max = 640.dp).align(Alignment.CenterHorizontally).verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xl).navigationBarsPadding().padding(bottom = Spacing.xxxl),
+                .padding(horizontal = Spacing.xl).bottomInsets().padding(bottom = Spacing.xxxl),
         ) {
             // Themes: inline previews, "See all" opens the full screen.
             SectionHeader("Themes", "See all", onSeeThemes)

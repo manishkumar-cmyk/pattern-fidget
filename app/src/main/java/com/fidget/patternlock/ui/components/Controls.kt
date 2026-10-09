@@ -1,5 +1,6 @@
 package com.fidget.patternlock.ui.components
 
+import com.fidget.patternlock.ui.theme.topInsets
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -13,8 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.wrapContentSize
@@ -67,7 +66,7 @@ fun FidgetIconButton(kind: FidgetIconKind, description: String, onClick: () -> U
 fun FidgetTopBar(title: String, onBack: (() -> Unit)?, modifier: Modifier = Modifier, subtitle: String? = null,
                  trailing: @Composable (() -> Unit)? = null) {
     val c = LocalFidget.current
-    Column(modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = Spacing.sm, vertical = Spacing.xs)) {
+    Column(modifier.fillMaxWidth().topInsets().padding(horizontal = Spacing.sm, vertical = Spacing.xs)) {
         Box(Modifier.fillMaxWidth().heightIn(min = 56.dp), contentAlignment = Alignment.Center) {
             if (onBack != null) Box(Modifier.align(Alignment.CenterStart)) { FidgetIconButton(FidgetIconKind.BACK, "Back", onBack) }
             FText(title, style = FidgetType.screenTitle, color = c.textPrimary)

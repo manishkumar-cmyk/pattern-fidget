@@ -53,6 +53,14 @@ class LogicTest {
         assertEquals(1, e.level)
     }
 
+    @Test fun memoryResumesWhereItStopped() {
+        val e = MemoryGameEngine(3, Random(3), resumeAt = 8)
+        assertEquals(6, e.level)
+        assertEquals(8, e.newRound().size)
+        assertEquals(3, MemoryGameEngine(3, resumeAt = 0).length)
+        assertEquals(9, MemoryGameEngine(3, resumeAt = 50).length)
+    }
+
     @Test fun memoryNeverAsksForMoreThanTheGrid() {
         val e = MemoryGameEngine(3, Random(2))
         repeat(12) { e.newRound(); e.advance() }

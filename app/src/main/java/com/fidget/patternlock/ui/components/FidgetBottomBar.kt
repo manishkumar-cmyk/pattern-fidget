@@ -1,11 +1,11 @@
 package com.fidget.patternlock.ui.components
 
+import com.fidget.patternlock.ui.theme.bottomInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,7 +32,7 @@ enum class NavTab(val label: String, val hint: String, val icon: FidgetIconKind,
 fun FidgetBottomBar(active: NavTab, onSelect: (NavTab) -> Unit, modifier: Modifier = Modifier, detailed: Boolean = false) {
     val c = LocalFidget.current
     Row(
-        modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+        modifier.fillMaxWidth().bottomInsets().padding(horizontal = Spacing.xl, vertical = Spacing.lg),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         NavTab.values().forEach { tab ->

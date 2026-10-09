@@ -1,8 +1,18 @@
 package com.fidget.patternlock.ui.home
 
+import com.fidget.patternlock.ui.theme.topInsets
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -59,6 +68,8 @@ import com.fidget.patternlock.ui.components.SkyBackdrop
 import com.fidget.patternlock.ui.theme.FidgetType
 import com.fidget.patternlock.ui.theme.LocalFidget
 import com.fidget.patternlock.ui.theme.Spacing
+import com.fidget.patternlock.ui.theme.bottomInsets
+import com.fidget.patternlock.ui.theme.topInsets
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -69,7 +80,7 @@ private val Dusky = Color(0xFFA9B0C8)
 
 @Composable
 fun HomeScreen(
-    onTab: (NavTab) -> Unit, onSettings: () -> Unit, onStart: () -> Unit, onConstellation: (String) -> Unit,
+    onTab: (NavTab) -> Unit, onSettings: () -> Unit, onConstellation: (String) -> Unit,
 ) {
     val env = LocalEnv.current
     val settings = env.settings
@@ -79,7 +90,7 @@ fun HomeScreen(
         if (!settings.amoled) SkyBackdrop()
         Column(Modifier.fillMaxSize()) {
             // Header: mark, wordmark and settings.
-            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = Spacing.xl, vertical = Spacing.md),
+            Row(Modifier.fillMaxWidth().topInsets().padding(horizontal = Spacing.xl, vertical = Spacing.md),
                 verticalAlignment = Alignment.CenterVertically) {
                 FidgetLogo(size = 48.dp)
                 Text(
@@ -115,21 +126,37 @@ fun HomeScreen(
                 FText("DOTS CONNECTED", Modifier.padding(top = 2.dp), TextStyle(fontSize = 12.sp, letterSpacing = 3.sp), Dusky)
             }
 
-            // Start drawing.
-            val shape = RoundedCornerShape(36.dp)
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = Spacing.xxl).padding(top = Spacing.lg).height(64.dp)
-                    .shadow(20.dp, shape, ambientColor = Amber, spotColor = Amber).clip(shape).background(Peach)
-                    .clickable(role = Role.Button, onClick = onStart),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(Modifier.weight(1f).padding(start = Spacing.xxl)) { FidgetIcon(FidgetIconKind.PLAY, Color(0xFF14110C), size = 28.dp) }
-                FText("Start Drawing", style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium), color = Color(0xFF14110C))
-                Box(Modifier.weight(1f).padding(end = Spacing.xxl), contentAlignment = Alignment.CenterEnd) {
-                    FidgetIcon(FidgetIconKind.CHEVRON, Color(0xFF14110C), size = 24.dp)
-                }
+            // The call to action sits at the bottom. Tapping it opens into the three tabs; back closes them again.
+            var open by remember { mutableStateOf(false) }
+            BackHandler(enabled = open) { open = false }
+            AnimatedContent(
+                open, Modifier.fillMaxWidth(), label = "startOrTabs",
+                transitionSpec = {
+                    (fadeIn(tween(420, delayMillis = 120)) + scaleIn(tween(420, delayMillis = 120), initialScale = 0.9f, transformOrigin = TransformOrigin(0.5f, 1f)))
+                        .togetherWith(fadeOut(tween(220)) + scaleOut(tween(220), targetScale = 0.9f, transformOrigin = TransformOrigin(0.5f, 1f)))
+                        .using(SizeTransform(clip = false))
+                },
+            ) { isOpen ->
+                if (isOpen) FidgetBottomBar(NavTab.DRAW, onSelect = onTab, detailed = true)
+                else StartButton(onClick = { open = true }, Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.xl).bottomInsets())
             }
-            FidgetBottomBar(NavTab.DRAW, onSelect = onTab, detailed = true)
+        }
+    }
+}
+
+@Composable
+private fun StartButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(36.dp)
+    Row(
+        modifier.fillMaxWidth().height(68.dp)
+            .shadow(20.dp, shape, ambientColor = Amber, spotColor = Amber).clip(shape).background(Peach)
+            .clickable(role = Role.Button, onClickLabel = "Open Draw, Memory and Collection", onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f).padding(start = Spacing.xxl)) { FidgetIcon(FidgetIconKind.PLAY, Color(0xFF14110C), size = 28.dp) }
+        FText("Start Drawing", style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium), color = Color(0xFF14110C))
+        Box(Modifier.weight(1f).padding(end = Spacing.xxl), contentAlignment = Alignment.CenterEnd) {
+            FidgetIcon(FidgetIconKind.CHEVRON, Color(0xFF14110C), size = 24.dp)
         }
     }
 }

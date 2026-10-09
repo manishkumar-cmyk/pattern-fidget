@@ -1,11 +1,11 @@
 package com.fidget.patternlock.ui.collection
 
+import com.fidget.patternlock.ui.theme.bottomInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
@@ -86,7 +86,7 @@ fun PlaybackScreen(id: Long, startLooping: Boolean, onBack: () -> Unit) {
             PatternGrid(Modifier.align(Alignment.Center).fillMaxSize().widthIn(max = 620.dp), gridSize = p.n, handle = handle,
                 interactive = false, autoFade = false, listener = feedback)
         }
-        Column(Modifier.widthIn(max = 560.dp).align(Alignment.CenterHorizontally).padding(horizontal = Spacing.xl).navigationBarsPadding()) {
+        Column(Modifier.widthIn(max = 560.dp).align(Alignment.CenterHorizontally).padding(horizontal = Spacing.xl).bottomInsets()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 FText("Speed", style = FidgetType.body)
                 FidgetSlider((speed - 0.5f) / 1.5f, { speed = 0.5f + it * 1.5f }, "Playback speed", Modifier.weight(1f).padding(horizontal = Spacing.sm))

@@ -1,5 +1,7 @@
 package com.fidget.patternlock.ui.collection
 
+import com.fidget.patternlock.ui.theme.topInsets
+import com.fidget.patternlock.ui.theme.bottomInsets
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -40,7 +41,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.fidget.patternlock.SavedPattern
 import com.fidget.patternlock.Shapes
@@ -88,7 +88,7 @@ fun CollectionScreen(onTab: (NavTab) -> Unit, onOpen: (id: Long, loop: Boolean) 
     }
 
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = Spacing.xxl, end = Spacing.sm, top = Spacing.sm),
+        Row(Modifier.fillMaxWidth().topInsets().padding(start = Spacing.xxl, end = Spacing.sm, top = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically) {
             FText("Collection", Modifier.weight(1f), FidgetType.title.copy(fontSize = 26.sp))
             FidgetIconButton(FidgetIconKind.SEARCH, "Search", { query = if (query == null) "" else null }, tint = c.textSecondary)
@@ -213,7 +213,7 @@ private fun PatternOptionsSheet(
         onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Color(Themes.mix(c.theme.bgTop, c.theme.surface, 0.8f)),
     ) {
-        Column(Modifier.padding(horizontal = Spacing.xl).padding(bottom = Spacing.xxl).navigationBarsPadding()) {
+        Column(Modifier.padding(horizontal = Spacing.xl).padding(bottom = Spacing.xxl).bottomInsets()) {
             FText(patternTitle(p), Modifier.padding(bottom = Spacing.sm), FidgetType.screenTitle)
             OptionRow("Play on loop", null, onLoop)
             OptionRow(if (p.favorite) "Remove from favourites" else "Add to favourites", null, onFavorite)

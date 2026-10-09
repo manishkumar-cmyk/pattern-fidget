@@ -1,9 +1,9 @@
 package com.fidget.patternlock.ui.themes
 
+import com.fidget.patternlock.ui.theme.bottomInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -31,7 +31,7 @@ fun ThemesScreen(onBack: () -> Unit) {
         FidgetTopBar("Themes", onBack)
         Column(
             Modifier.weight(1f).widthIn(max = 640.dp).align(Alignment.CenterHorizontally).verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xl, vertical = Spacing.sm).navigationBarsPadding(),
+                .padding(horizontal = Spacing.xl, vertical = Spacing.sm).bottomInsets(),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Themes.all.forEachIndexed { i, base ->
