@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import com.fidget.patternlock.domain.Constellation
 import com.fidget.patternlock.domain.Constellations
 import com.fidget.patternlock.domain.formatDotCount
+import com.fidget.patternlock.domain.levels.LevelPacks
 import com.fidget.patternlock.ui.LocalEnv
 import com.fidget.patternlock.ui.components.ConstellationArt
 import com.fidget.patternlock.ui.components.FText
@@ -81,6 +82,8 @@ private val Dusky = Color(0xFFA9B0C8)
 @Composable
 fun HomeScreen(
     onTab: (NavTab) -> Unit, onSettings: () -> Unit, onConstellation: (String) -> Unit,
+    /** Opens the Journey map, then the given level if there is one to continue. */
+    onJourney: (String?) -> Unit,
 ) {
     val env = LocalEnv.current
     val settings = env.settings
@@ -126,6 +129,8 @@ fun HomeScreen(
                 FText("DOTS CONNECTED", Modifier.padding(top = 2.dp), TextStyle(fontSize = 12.sp, letterSpacing = 3.sp), Dusky)
             }
 
+            JourneyCard(onJourney, Modifier.padding(horizontal = Spacing.xxl).padding(top = Spacing.lg))
+
             // The call to action sits at the bottom. Tapping it opens into the three tabs; back closes them again.
             var open by remember { mutableStateOf(false) }
             BackHandler(enabled = open) { open = false }
@@ -141,6 +146,41 @@ fun HomeScreen(
                 else StartButton(onClick = { open = true }, Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.xl).bottomInsets())
             }
         }
+    }
+}
+
+/** Continue the Journey from wherever the player left it. */
+@Composable
+private fun JourneyCard(onJourney: (String?) -> Unit, modifier: Modifier = Modifier) {
+    val env = LocalEnv.current
+    val progress = env.progress
+    val c = LocalFidget.current
+    val next = progress.nextLevel()
+    val title = when {
+        !progress.hasStarted -> "Begin the Journey"
+        next == null -> "Journey complete"
+        else -> "Continue the Journey"
+    }
+    val detail = when {
+        next == null -> if (env.settings.hideScores) "Every level cleared" else "${progress.totalStars} of ${progress.maxStars} stars"
+        !progress.hasStarted -> "Puzzles to solve, one calm level at a time"
+        else -> "${LevelPacks.world(next).name} ${next.number}  ·  ${next.name}"
+    }
+    val shape = RoundedCornerShape(24.dp)
+    Row(
+        modifier.fillMaxWidth().height(64.dp).clip(shape).background(c.surface)
+            .border(BorderStroke(1.dp, Amber.copy(alpha = 0.35f)), shape)
+            .clickable(role = Role.Button, onClickLabel = title) { onJourney(if (progress.hasStarted) next?.id else null) }
+            .semantics(mergeDescendants = true) { contentDescription = "$title. $detail" }
+            .padding(horizontal = Spacing.lg),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FidgetIcon(FidgetIconKind.JOURNEY, Amber, size = 28.dp)
+        Column(Modifier.weight(1f).padding(horizontal = Spacing.md)) {
+            FText(title, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium), color = Cream, maxLines = 1)
+            FText(detail, style = TextStyle(fontSize = 12.5.sp), color = Dusky, maxLines = 1)
+        }
+        FidgetIcon(FidgetIconKind.CHEVRON, Cream, size = 20.dp)
     }
 }
 

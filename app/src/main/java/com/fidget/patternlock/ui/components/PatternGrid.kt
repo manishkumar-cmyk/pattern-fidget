@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.fidget.patternlock.DotMark
 import com.fidget.patternlock.Mode
 import com.fidget.patternlock.PatternView
 import com.fidget.patternlock.Shape
@@ -58,6 +59,8 @@ fun PatternGrid(
     interactive: Boolean = true,
     autoFade: Boolean = true,
     guide: List<Int>? = null,
+    outline: List<Int>? = null,
+    marks: Map<Int, DotMark> = emptyMap(),
     longPress: Boolean = false,
     interruptible: Boolean = false,
     idleBreathing: Boolean = true,
@@ -90,6 +93,8 @@ fun PatternGrid(
             pv.interactive = interactive
             pv.autoFade = autoFade
             pv.guide = guide
+            if (pv.outline != outline) pv.outline = outline
+            if (pv.marks != marks) pv.marks = marks
             pv.longPressEnabled = longPress
             pv.interruptible = interruptible
             pv.idleBreathing = idleBreathing

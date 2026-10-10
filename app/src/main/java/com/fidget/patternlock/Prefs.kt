@@ -113,6 +113,15 @@ class Prefs(context: Context) {
         get() = raw.getLong("homePattern", 0L)
         set(v) = put { putLong("homePattern", v) }
 
+    /** Journey results: "1-1:3,1-2:2", best stars per cleared level. 0 stars means it was skipped. */
+    var levels: String
+        get() = raw.getString("levels", "") ?: ""
+        set(v) = put { putString("levels", v) }
+    /** Hides stars and counts in the Journey, for anyone who prefers it without scores. */
+    var hideScores: Boolean
+        get() = b("hideScores", false)
+        set(v) = put { putBoolean("hideScores", v) }
+
     /** One-time hints: each key counts how often it has been shown. */
     fun hintCount(key: String) = i("hint_$key", 0)
     fun bumpHint(key: String) = put { putInt("hint_$key", hintCount(key) + 1) }

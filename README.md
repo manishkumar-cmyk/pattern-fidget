@@ -20,6 +20,9 @@ gentle generative music and a quiet haptic language. Nothing unlocks. Nothing is
 - **Haptics**: tick on entering, slightly stronger with each dot, a soft double pulse on finish,
   a slow swell for every dot, a muted double tick for a missed Memory pattern. Light/Medium/Strong.
 - **Memory**: watch, then echo. Relaxed (faint guide stays), Classic, Focus (plays once).
+- **Journey** (card on Home): handcrafted levels in worlds (Dusk 3×3, Tide 4×4). Five puzzle types:
+  Trace an outline, Path (touch gold dots, avoid crossed ones), Silhouette, Reverse and Mirror.
+  1–3 stars for neatness, no timers or lives, skip after three tries. Settings → Hide scores.
   A miss offers Try again, Show pattern or Start fresh. No levels, no timers.
 - **Collection**: living cards that redraw themselves. Favourites, names, grid filters,
   playback with speed and loop, and "Use as home animation".
@@ -52,6 +55,6 @@ It installs over version 2 and keeps your saved patterns.
 - `ui/home|draw|memory|collection|settings|themes/`: one folder per screen
 - `PatternView.kt`: the grid itself: touch, lock rules, modes, springs, layered glow, ripples, completions, accessibility
 - `interaction/`: `GridFeedback` (grid events to sound, haptics, counter) and `SavePrompt`
-- `domain/`: `MemoryGameEngine` and display formatting
+- `domain/`: `MemoryGameEngine`, `levels/` (Journey levels, rules and par solver) and display formatting
 - `data/FidgetEnv.kt`: observable settings, store, sound and haptics shared by every screen
 - `Sound.kt` (ten synthesized sound packs, incl. Marimba), `Haptics.kt`, `Theme.kt`, `Shapes.kt`, `Patterns.kt`, `Prefs.kt`

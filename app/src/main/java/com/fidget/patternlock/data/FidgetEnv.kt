@@ -57,6 +57,7 @@ class FidgetSettings(private val prefs: Prefs) {
     var mirrorFourWay by Persisted(prefs.mirrorFourWay) { prefs.mirrorFourWay = it }
     var difficulty by Persisted(prefs.difficulty) { prefs.difficulty = it }
     var homePattern by Persisted(prefs.homePattern) { prefs.homePattern = it }
+    var hideScores by Persisted(prefs.hideScores) { prefs.hideScores = it }
     /** Lifetime connected dots. Held in memory while drawing and written out on release and pause. */
     var totalDots by mutableLongStateOf(prefs.totalDots)
     fun persistTotal() { prefs.totalDots = totalDots }
@@ -75,6 +76,7 @@ class FidgetEnv(context: Context) {
     val prefs = Prefs(context)
     val settings = FidgetSettings(prefs)
     val store = PatternStore(prefs.raw)
+    val progress = ProgressStore(prefs)
     val sound = SoundEngine(context)
     val haptics = Haptics(context)
     val music = MusicPlayer(context)

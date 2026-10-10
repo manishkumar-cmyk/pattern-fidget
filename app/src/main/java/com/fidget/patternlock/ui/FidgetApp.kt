@@ -22,6 +22,8 @@ import com.fidget.patternlock.ui.components.NavTab
 import com.fidget.patternlock.ui.draw.DrawModesScreen
 import com.fidget.patternlock.ui.draw.DrawScreen
 import com.fidget.patternlock.ui.home.HomeScreen
+import com.fidget.patternlock.ui.journey.JourneyScreen
+import com.fidget.patternlock.ui.journey.LevelScreen
 import com.fidget.patternlock.ui.memory.MemoryScreen
 import com.fidget.patternlock.ui.settings.SettingsScreen
 import com.fidget.patternlock.ui.theme.FidgetTheme
@@ -39,6 +41,8 @@ object Routes {
     const val THEMES = "themes"
     const val CONSTELLATIONS = "constellations"
     const val CONSTELLATION = "constellation/{id}"
+    const val JOURNEY = "journey"
+    const val LEVEL = "level/{id}"
 }
 
 /** The values that decide how the sound and haptic engines are configured. A change re-applies them. */
@@ -78,6 +82,10 @@ private fun AppNav() {
             HomeScreen(
                 onTab = ::toTab, onSettings = { nav.navigate(Routes.SETTINGS) },
                 onConstellation = { nav.navigate("constellation/$it") },
+                onJourney = { level ->
+                    nav.navigate(Routes.JOURNEY)
+                    if (level != null) nav.navigate("level/$level")
+                },
             )
         }
         composable(Routes.DRAW) {
@@ -123,5 +131,15 @@ private fun AppNav() {
             )
         }
         composable(Routes.THEMES) { ThemesScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.JOURNEY) {
+            JourneyScreen(onBack = { nav.popBackStack() }, onLevel = { nav.navigate("level/$it") })
+        }
+        composable(Routes.LEVEL, listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+            LevelScreen(
+                id = entry.arguments?.getString("id") ?: "",
+                onBack = { nav.popBackStack() },
+                onNext = { next -> nav.navigate("level/$next") { popUpTo(Routes.JOURNEY) } },
+            )
+        }
     }
 }

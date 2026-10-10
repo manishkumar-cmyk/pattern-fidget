@@ -22,6 +22,7 @@ import kotlin.math.sin
 enum class FidgetIconKind {
     BACK, GEAR, TUNE, DRAW, MEMORY, COLLECTION, HEART, HEART_OUTLINE, PLAY, MORE, SEARCH, CLOSE,
     INFINITY, MIRROR, RIPPLE, CONSTELLATION, ZEN, EYE, RETRY, HOME, LOOP, CHECK, CHART, BELL, PIANO, MARIMBA, BUBBLES, WAVE, CHEVRON,
+    STAR, STAR_OUTLINE, LOCK, JOURNEY,
 }
 
 /** Thin line icons drawn on a 24-unit canvas, so the app needs no image assets. */
@@ -182,6 +183,33 @@ private fun DrawScope.drawIcon(kind: FidgetIconKind, c: Color) {
         FidgetIconKind.LOOP -> {
             drawArc(c, 20f, 300f, false, Offset(5f * u, 5f * u), Size(14f * u, 14f * u), style = line)
             poly(18f, 2.5f, 18.6f, 6.8f, 14.4f, 7.4f)
+        }
+        FidgetIconKind.STAR, FidgetIconKind.STAR_OUTLINE -> {
+            // five points, rounded joins
+            val pts = FloatArray(20)
+            for (k in 0 until 10) {
+                val r = if (k % 2 == 0) 9f else 4f
+                val a = -PI / 2 + k * PI / 5
+                pts[k * 2] = 12f + r * cos(a).toFloat()
+                pts[k * 2 + 1] = 12.6f + r * sin(a).toFloat()
+            }
+            poly(*pts, close = true, fill = kind == FidgetIconKind.STAR)
+            if (kind == FidgetIconKind.STAR) poly(*pts, close = true)
+        }
+        FidgetIconKind.LOCK -> {
+            drawRoundRect(c, o(5.5f, 10.5f), Size(13f * u, 9.5f * u), androidx.compose.ui.geometry.CornerRadius(2f * u), style = line)
+            drawArc(c, 180f, 180f, false, Offset(8.5f * u, 5f * u), Size(7f * u, 8f * u), style = line)
+            dot(12f, 15.2f, 1.2f)
+        }
+        FidgetIconKind.JOURNEY -> {
+            // a winding path between three stops
+            val p = Path().apply {
+                moveTo(5f * u, 19f * u)
+                cubicTo(14f * u, 19f * u, 14f * u, 12f * u, 10f * u, 12f * u)
+                cubicTo(6f * u, 12f * u, 7f * u, 5f * u, 19f * u, 5f * u)
+            }
+            drawPath(p, c, style = line)
+            dot(5f, 19f, 2f); dot(11.5f, 12f, 1.6f); dot(19f, 5f, 2f)
         }
     }
 }

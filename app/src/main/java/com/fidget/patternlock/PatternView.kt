@@ -107,6 +107,12 @@ class PatternView(context: Context) : View(context) {
     /** A faint guide pattern (Memory, Relaxed difficulty). */
     var guide: List<Int>? = null
         set(value) { field = value; invalidate() }
+    /** A softly visible outline to trace (Journey levels). Drawn a little brighter than [guide]. */
+    var outline: List<Int>? = null
+        set(value) { field = value; invalidate() }
+    /** Dots with a puzzle role (Journey levels). Each mark has its own shape, so colour is never the only cue. */
+    var marks: Map<Int, DotMark> = emptyMap()
+        set(value) { field = value; invalidate() }
     /** Space reserved above and below the grid for interface chrome, in px. */
     var insetTop = 0
         set(value) { field = value; computeLayout() }
@@ -799,6 +805,7 @@ class PatternView(context: Context) : View(context) {
 
         // Faint guide (Memory, Relaxed)
         guide?.let { g -> if (g.size >= 2) drawTrail(canvas, g.map { centersX[it] }.toFloatArray(), g.map { centersY[it] }.toFloatArray(), t.line, 0.12f, 0.8f, false) }
+        outline?.let { g -> if (g.size >= 2) drawTrail(canvas, g.map { centersX[it] }.toFloatArray(), g.map { centersY[it] }.toFloatArray(), t.line, 0.26f, 0.9f, false) }
 
         // Lingering trails: Endless Flow tails and Constellation star lines
         val gi = ghosts.iterator()
@@ -924,8 +931,45 @@ class PatternView(context: Context) : View(context) {
             canvas.restore()
         }
 
+        if (marks.isNotEmpty()) drawMarks(canvas, now)
+
         if (animating) postInvalidateOnAnimation()
         else if (idleBreathing && !reduceMotion) postInvalidateDelayed(33)
+    }
+
+    /** Must dots wear a warm ring, avoid dots a small cross, anchors a thin ring in the line colour. */
+    private fun drawMarks(canvas: Canvas, now: Long) {
+        val t = theme
+        val pulse = if (reduceMotion) 1f else 0.85f + 0.15f * sin(2 * PI * (now % 2400) / 2400.0).toFloat()
+        for ((i, mark) in marks) {
+            if (i !in centersX.indices) continue
+            val x = centersX[i]; val y = centersY[i]
+            when (mark) {
+                DotMark.MUST -> {
+                    val done = isSelected[i]
+                    stroke.color = MUST_COLOR
+                    stroke.strokeWidth = 2.2f * density
+                    stroke.alpha = (255 * restDim * (if (done) 0.55f else 0.95f * pulse)).toInt()
+                    canvas.drawCircle(x, y, dotR * (if (done) 2.9f else 2.5f), stroke)
+                    if (!done && t.glow > 0f) drawGlow(canvas, x, y, dotR * 4.5f, MUST_COLOR, 0.25f * pulse * restDim)
+                }
+                DotMark.AVOID -> {
+                    val d = dotR * 1.9f
+                    stroke.color = t.error
+                    stroke.strokeWidth = 2.2f * density
+                    stroke.alpha = (255 * restDim * 0.9f).toInt()
+                    canvas.drawLine(x - d, y - d, x + d, y + d, stroke)
+                    canvas.drawLine(x + d, y - d, x - d, y + d, stroke)
+                }
+                DotMark.ANCHOR -> {
+                    stroke.color = t.line
+                    stroke.strokeWidth = 1.4f * density
+                    stroke.alpha = (255 * restDim * 0.6f * pulse).toInt()
+                    canvas.drawCircle(x, y, dotR * 2.3f, stroke)
+                }
+            }
+        }
+        if (!reduceMotion) postInvalidateOnAnimation()
     }
 
     /** A smooth radial glow: one cached unit gradient per colour, scaled to size, so there are no visible rings. */
@@ -1126,7 +1170,12 @@ class PatternView(context: Context) : View(context) {
     private fun a11yLabel(id: Int): String {
         val n = gridSize
         if (id == n * n) return "Finish pattern"
-        val base = "Row ${id / n + 1}, column ${id % n + 1}"
+        val base = "Row ${id / n + 1}, column ${id % n + 1}" + when (marks[id]) {
+            DotMark.MUST -> ", gold dot"
+            DotMark.AVOID -> ", avoid"
+            DotMark.ANCHOR -> ", start or end"
+            null -> ""
+        }
         val k = selected.indexOf(id)
         return if (k >= 0) "$base, connected, ${k + 1} of ${selected.size}" else base
     }
@@ -1261,3 +1310,8 @@ class PatternView(context: Context) : View(context) {
         return id != Int.MIN_VALUE || super.dispatchHoverEvent(event)
     }
 }
+
+/** A dot's role in a Journey puzzle. */
+enum class DotMark { MUST, AVOID, ANCHOR }
+
+private const val MUST_COLOR = 0xFFF6C27C.toInt()

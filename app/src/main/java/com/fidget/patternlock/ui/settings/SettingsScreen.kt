@@ -129,6 +129,7 @@ fun SettingsScreen(onBack: () -> Unit, onSeeThemes: () -> Unit) {
             ToggleRow("Larger dots", s.largerDots, { s.largerDots = it }, subtitle = "Bigger dots and touch areas")
             ToggleRow("Show path lines", s.showLines, { s.showLines = it }, subtitle = "Off shows dots only")
             ToggleRow("Quiet completions", s.quietCompletion, { s.quietCompletion = it }, subtitle = "Patterns simply fade when you lift")
+            ToggleRow("Hide scores", s.hideScores, { s.hideScores = it }, subtitle = "Journey shows ticks instead of stars")
 
             Spacer(Spacing.xl)
             FText("Pattern Fidget 4.0", style = FidgetType.bodyMedium)
